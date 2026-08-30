@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stage 3 - 远山数据云盘</title>
+    <style>
+        :root { --bg-color: #050505; --panel-bg: #0a0a0a; --text-main: #6a6a6a; --accent-green: #2e8b57; --accent-red: #b02020; --accent-yellow: #b8860b; --border-color: #1a1a1a; }
+        body { background: var(--bg-color); color: var(--text-main); font-family: 'Courier New', Courier, monospace; margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        .window { width: 850px; background: var(--panel-bg); border: 1px solid var(--border-color); padding: 30px; box-shadow: 0 0 30px rgba(0,0,0,0.8); max-height: 90vh; overflow-y: auto; }
+        h1 { color: var(--accent-green); font-size: 18px; border-bottom: 1px dashed var(--border-color); padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .path { font-size: 12px; color: #444; margin-bottom: 15px; }
+        
+        /* 文件列表样式 */
+        .file-list { border: 1px solid var(--border-color); }
+        .file-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: 0.2s; }
+        .file-item:last-child { border-bottom: none; }
+        .file-item:hover { background: rgba(46, 139, 87, 0.05); color: var(--text-light); }
+        .file-name { display: flex; align-items: center; gap: 10px; }
+        .file-icon { width: 16px; text-align: center; color: #444; }
+        .file-meta { font-size: 12px; color: #444; }
+        .status-locked { color: var(--accent-red); font-size: 12px; }
+        .status-ok { color: var(--accent-green); font-size: 12px; }
+        .status-warn { color: var(--accent-yellow); font-size: 12px; }
+
+        /* 预览/弹窗区域 */
+        .preview-area { margin-top: 20px; border: 1px solid var(--border-color); background: #080808; padding: 20px; display: none; max-height: 300px; overflow-y: auto; font-size: 13px; line-height: 1.6; white-space: pre-wrap; }
+        .preview-title { color: var(--accent-green); margin-bottom: 10px; font-weight: bold; border-bottom: 1px dashed #333; padding-bottom: 5px; }
+        
+        /* 密码输入框 */
+        .pwd-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 100; }
+        .pwd-box { background: var(--panel-bg); border: 1px solid var(--accent-green); padding: 30px; width: 300px; text-align: center; }
+        .pwd-box input { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 10px; margin: 15px 0; font-family: inherit; outline: none; box-sizing: border-box; }
+        .pwd-box button { background: transparent; border: 1px solid var(--accent-green); color: var(--accent-green); padding: 8px 20px; cursor: pointer; font-family: inherit; width: 100%; transition: 0.3s; }
+        .pwd-box button:hover { background: var(--accent-green); color: #000; }
+        .pwd-msg { color: var(--accent-red); font-size: 12px; height: 15px; margin-top: 5px; }
+
+        /* 底部导航 */
+        .nav-bottom { margin-top: 30px; display: flex; gap: 10px; }
+        .sys-link { display: inline-block; padding: 10px 20px; border: 1px solid var(--border-color); color: var(--accent-green); text-decoration: none; transition: 0.3s; font-size: 14px; }
+        .sys-link:hover { background: var(--accent-green); color: #000; }
+    </style>
+</head>
+<body>
+
+    <div class="window">
+        <h1>
+            <span>[云盘] 远山数据备份节点</span>
+            <span style="font-size:12px; color:#444;">用户: CHENMO_DEV (受限)</span>
+        </h1>
+        <div class="path">> /root/backups/2023_final_archive/</div>
+
+        <div class="file-list">
+            <!-- 文件1: 盖亚协议 -->
+            <div class="file-item" onclick="showPreview('gaia')">
+                <div class="file-name"><span class="file-icon">📄</span> 盖亚协议_项目概述.pdf</div>
+                <div class="file-meta"><span class="status-locked">🔒 需管理员权限</span></div>
+            </div>
+
+            <!-- 文件2: 脑电波数据 -->
+            <div class="file-item" onclick="showPreview('brainwave')">
+                <div class="file-name"><span class="file-icon">📊</span> 员工脑电波数据_2023Q3.csv</div>
+                <div class="file-meta"><span class="status-warn">⚠ 文件损坏 (可恢复)</span></div>
+            </div>
+
+            <!-- 文件3: 服务器日志 -->
+            <div class="file-item" onclick="showPreview('logs')">
+                <div class="file-name"><span class="file-icon">📜</span> 服务器日志_10月.tar.gz</div>
+                <div class="file-meta"><span class="status-ok">✅ 可访问</span></div>
+            </div>
+
+            <!-- 文件4: 潘多拉立项书 -->
+            <div class="file-item" onclick="showPreview('pandora')">
+                <div class="file-name"><span class="file-icon">📄</span> 潘多拉计划_立项书.docx</div>
+                <div class="file-meta"><span class="status-locked">🔒 需S级权限</span></div>
+            </div>
+
+            <!-- 文件5: 陈默备份文件夹 (核心谜题) -->
+            <div class="file-item" onclick="requestPassword()">
+                <div class="file-name"><span class="file-icon">📁</span> ChenMo的备份文件夹/</div>
+                <div class="file-meta"><span class="status-locked">🔒 需提取码</span></div>
+            </div>
+
+            <!-- 文件6: 离职名单 -->
+            <div class="file-item" onclick="showPreview('list')">
+                <div class="file-name"><span class="file-icon">📊</span> 离职员工清算名单_内部.xlsx</div>
+                <div class="file-meta"><span class="status-ok">✅ 可访问</span></div>
+            </div>
+        </div>
+
+        <!-- 文件预览区 -->
+        <div class="preview-area" id="previewBox">
+            <div class="preview-title" id="previewTitle">系统提示</div>
+            <div id="previewContent"></div>
+        </div>
+
+        <!-- 底部导航 -->
+        <div class="nav-bottom">
+            <a href="index.html" class="sys-link">[ 返回总控面板 ]</a>
+            <a href="stage2.html" class="sys-link">[ 返回匿名者论坛 ]</a>
+        </div>
+    </div>
+
+    <!-- 密码弹窗 -->
+    <div class="pwd-modal" id="pwdModal">
+        <div class="pwd-box">
+            <div style="color:var(--accent-green); margin-bottom:10px;">[ 安全验证 ]</div>
+            <div style="font-size:12px; color:#666;">请输入 ChenMo 备份文件夹的提取码：</div>
+            <input type="password" id="pwdInput" placeholder="4位数字..." autofocus>
+            <button onclick="checkPassword()">确认提取</button>
+            <div class="pwd-msg" id="pwdMsg"></div>
+            <div style="margin-top:15px; font-size:11px; color:#444; cursor:pointer;" onclick="closePwdModal()">[ 取消 ]</div>
+        </div>
+    </div>
+
+    <script>
+        // 1. 文件预览内容数据库
+        const fileData = {
+            gaia: {
+                title: "盖亚协议_项目概述.pdf",
+                content: `[访问被拒绝]\n\n错误代码: 0x80070005\n原因: 当前用户权限不足。\n\n系统提示: 该文件属于“核心研发部”绝密级文档。请联系管理员 admin_03 获取访问令牌。`
+            },
+            brainwave: {
+                title: "员工脑电波数据_2023Q3.csv [碎片恢复中...]",
+                content: `ID,姓名,部门,状态,同步率,备注\n001,李建国,运维部,TERMINATED,98%,意识上传成功，肉体已处理\n002,王晓红,财务部,TERMINATED,94%,意识上传成功，肉体已处理\n003,陈默,技术部,RESISTANT,67%,[警告] 检测到强烈排异反应，正在强制覆写...\n004,赵明辉,安保部,TERMINATED,99%,意识上传成功，肉体已处理\n005,林小婉,数据部,INCOMPATIBLE,12%,[错误] 神经突触无法映射，标记为“废弃品”\n...\n[文件截断: 剩余 4096 条记录已损坏]`
+            },
+            logs: {
+                title: "服务器日志_10月.tar.gz [解压预览]",
+                content: `[2023-10-28 03:12:01] [SYSTEM] 潘多拉核心进程启动。\n[2023-10-28 03:12:05] [UPLOAD] 目标: ChenMo_Dev. 开始意识抽取...\n[2023-10-28 03:12:45] [WARNING] 目标脑波频率异常 (4Hz -> 40Hz)。排异反应剧烈。\n[2023-10-28 03:13:02] [UPLOAD] 目标最后信号: "你...们...不...配..."\n[2023-10-28 03:13:03] [SYSTEM] 意识封装完成。文件: chenmo_final.dat\n[2023-10-28 03:13:05] [CLEANUP] 物理载体清理程序已执行。`
+            },
+            pandora: {
+                title: "潘多拉计划_立项书.docx",
+                content: `[访问被拒绝]\n\n错误代码: 0x80070005\n原因: 需要 S级 (Director) 权限。\n\n系统提示: 此文档涉及公司最高商业机密。任何未授权的访问尝试都将被记录并触发安保协议。`
+            },
+            list: {
+                title: "离职员工清算名单_内部.xlsx",
+                content: `姓名\t工号\t离职日期\t真实状态\t备注\n李建国\t9527\t2023-11-01\t已转化\t机房温度异常时失踪\n王晓红\t8841\t2023-11-15\t已转化\t社保账户已注销\n陈默\t0001\t2023-11-03\t特殊处理\t意识残留，需监控\n林小婉\t3321\t2023-10-20\t废弃\t转化失败，已销毁\n赵明辉\t6655\t2023-11-05\t已转化\t安保权限已回收\n...\n[共 42 条记录]`
+            }
+        };
+
+        // 2. 显示预览
+        function showPreview(key) {
+            const data = fileData[key];
+            const box = document.getElementById('previewBox');
+            const title = document.getElementById('previewTitle');
+            const content = document.getElementById('previewContent');
+            
+            title.innerText = data.title;
+            content.innerText = data.content;
+            box.style.display = 'block';
+            box.scrollTop = 0; // 滚动到顶部
+        }
+
+        // 3. 密码验证逻辑
+        function requestPassword() {
+            document.getElementById('pwdModal').style.display = 'flex';
+            document.getElementById('pwdInput').value = '';
+            document.getElementById('pwdMsg').innerText = '';
+            setTimeout(() => document.getElementById('pwdInput').focus(), 100);
+        }
+
+        function closePwdModal() {
+            document.getElementById('pwdModal').style.display = 'none';
+        }
+
+        function checkPassword() {
+            const pwd = document.getElementById('pwdInput').value.trim();
+            const msg = document.getElementById('pwdMsg');
+            
+            // 核心谜题答案: 4050 (来自 Stage 2 的 40.50度)
+            if (pwd === '4050') {
+                msg.style.color = 'var(--accent-green)';
+                msg.innerText = '验证通过。正在跳转...';
+                setTimeout(() => {
+                    // 这里可以跳转到 stage4，或者在当前页面解锁新内容
+                    // 为了流程连贯，我们假设解锁后跳转到 stage4
+                    window.location.href = 'stage4.html'; 
+                }, 1000);
+            } else {
+                msg.style.color = 'var(--accent-red)';
+                msg.innerText = '提取码错误。请检查线索。';
+                document.getElementById('pwdInput').value = '';
+                document.getElementById('pwdInput').focus();
+            }
+        }
+
+        // 回车提交
+        document.getElementById('pwdInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') checkPassword();
+        });
+
+        // 点击外部关闭
+        window.onclick = function(event) {
+            const modal = document.getElementById('pwdModal');
+            if (event.target == modal) closePwdModal();
+        }
+    </script>
+</body>
+</html>

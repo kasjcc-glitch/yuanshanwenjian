@@ -1,0 +1,485 @@
+
+
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stage 6 - 潘多拉核心：意识深渊</title>
+    <style>
+        :root {
+            --bg-color: #050505;
+            --panel-bg: #0a0a0a;
+            --text-main: #6a6a6a;
+            --accent-green: #2e8b57;
+            --accent-red: #b02020;
+            --border-color: #1a1a1a;
+        }
+        body {
+            background: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 20px;
+            height: 100vh;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .window {
+            width: 850px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            padding: 30px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            max-height: 95vh;
+            overflow-y: auto;
+        }
+        h1 {
+            color: var(--accent-green);
+            font-size: 18px;
+            border-bottom: 1px dashed var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        h2 {
+            color: var(--accent-green);
+            font-size: 15px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .scene-text {
+            color: #888;
+            line-height: 1.6;
+            font-size: 13px;
+            margin-bottom: 15px;
+            border-left: 3px solid var(--accent-green);
+            padding-left: 15px;
+        }
+        .puzzle-area {
+            border: 1px solid var(--border-color);
+            background: #000;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .fragment-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 15px 0;
+        }
+        .fragment {
+            border: 1px dashed #444;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 13px;
+            color: #aaa;
+            position: relative;
+        }
+        .fragment:hover {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+            background: #0a1a0a;
+        }
+        .fragment.locked {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+            background: #0a1a0a;
+            cursor: default;
+        }
+        .fragment.wrong {
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+            animation: shake 0.5s;
+        }
+        .fragment::before {
+            content: attr(data-num) " ";
+            color: #444;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        .fragment.locked::before {
+            content: "✓ " attr(data-num) " ";
+            color: var(--accent-green);
+        }
+        .ordered-area {
+            border: 1px solid var(--accent-green);
+            background: #050a05;
+            padding: 15px;
+            margin: 15px 0;
+            min-height: 60px;
+        }
+        .ordered-area .ordered-item {
+            color: var(--accent-green);
+            font-size: 12px;
+            margin-bottom: 5px;
+            padding-left: 20px;
+        }
+        .ordered-area .ordered-item::before {
+            content: "▸ ";
+            color: var(--accent-green);
+        }
+        input[type="text"], input[type="password"], input[type="number"] {
+            background: #000;
+            border: 1px solid #444;
+            color: var(--accent-green);
+            padding: 10px;
+            font-family: inherit;
+            font-size: 14px;
+            width: 250px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+        input:focus {
+            outline: none;
+            border-color: var(--accent-green);
+        }
+        button {
+            background: transparent;
+            border: 1px solid var(--accent-green);
+            color: var(--accent-green);
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            transition: 0.3s;
+        }
+        button:hover {
+            background: var(--accent-green);
+            color: #000;
+        }
+        button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        .msg {
+            margin-top: 10px;
+            font-size: 13px;
+            min-height: 20px;
+        }
+        .msg.success { color: var(--accent-green); }
+        .msg.error { color: var(--accent-red); }
+        .hint {
+            font-size: 11px;
+            color: #555;
+            margin-top: 5px;
+        }
+        .hidden { display: none; }
+        .status-bar {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            font-size: 12px;
+            color: #555;
+            display: flex;
+            justify-content: space-between;
+        }
+        .status-bar span.active { color: var(--accent-green); }
+        .glitch {
+            animation: glitch 0.3s cubic-bezier(.25,.46,.45,.94) both infinite;
+            color: var(--accent-red);
+        }
+        @keyframes glitch {
+            0% { transform: translate(0) }
+            20% { transform: translate(-2px, 2px) }
+            40% { transform: translate(-2px, -2px) }
+            60% { transform: translate(2px, 2px) }
+            80% { transform: translate(2px, -2px) }
+            100% { transform: translate(0) }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .terminal-line {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 3px;
+        }
+        .terminal-line.green { color: var(--accent-green); }
+        .terminal-line.red { color: var(--accent-red); }
+        .terminal-line.yellow { color: #ccaa00; }
+        .code-display {
+            background: #000;
+            border: 1px solid #333;
+            padding: 15px;
+            font-size: 14px;
+            color: var(--accent-green);
+            margin: 10px 0;
+            text-align: center;
+            letter-spacing: 3px;
+        }
+        .nav-links {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .sys-link {
+            display: inline-block;
+            padding: 8px 15px;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            text-decoration: none;
+            font-size: 12px;
+            transition: 0.3s;
+        }
+        .sys-link:hover {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+    </style>
+</head>
+<body>
+
+<div class="window">
+    <div class="status-bar">
+        <span>远山数据 - 潘多拉核心 [意识深渊层]</span>
+        <span>同步状态: <span id="sync-status" class="active">神经连接稳定</span></span>
+    </div>
+
+    <h1>// 潘多拉核心 - 意识深渊 //</h1>
+
+    <div class="scene-text">
+        输入 <strong>SHUTDOWN_OMEGA</strong> 后，系统并未如预期般关闭。<br>
+        相反，一阵强烈的电流穿过你的神经接口。你的意识被强行拉入系统的最深层——<br>
+        <strong>意识深渊</strong>。这里是所有被转化为"生物算力"的员工意识数据的存储区。<br>
+        无数碎片化的意识在你周围闪烁，像被困在琥珀中的昆虫。<br>
+        <br>
+        一个冰冷的合成音在数据虚空中响起：<br>
+        <span style="color:var(--accent-red);">"检测到未授权访问。潘多拉核心协议启动最终防线。<br>
+        如需终止系统，你必须通过三层意识验证。<br>
+        第一层：重组破碎的意识碎片，还原真相。<br>
+        第二层：提供管理员生物密钥。<br>
+        第三层：执行最终覆写指令。"</span>
+    </div>
+
+    <!-- ========== 谜题1：意识碎片排序 ========== -->
+    <div id="puzzle-1" class="puzzle-area">
+        <h2>[ 谜题1/3 ] 意识碎片拼凑</h2>
+        <p style="font-size:12px; color:#888;">以下是一段被系统打乱的意识记录。请按时间顺序点击碎片，将其排列到下方的"已排序"区域中。</p>
+        
+        <div class="fragment-container" id="fragment-container">
+            <!-- 碎片由JS随机打乱生成 -->
+        </div>
+
+        <div style="margin-top:15px;">
+            <div style="font-size:12px; color:#666; margin-bottom:5px;">已排序（按点击顺序）：</div>
+            <div class="ordered-area" id="ordered-area">
+                <div style="color:#444; font-size:12px;">等待操作...</div>
+            </div>
+        </div>
+
+        <div id="p1-msg" class="msg"></div>
+        <div class="hint">提示：注意碎片中提到的时间、人物和事件因果关系。</div>
+    </div>
+
+    <!-- ========== 谜题2：生物密钥输入 ========== -->
+    <div id="puzzle-2" class="puzzle-area hidden">
+        <h2>[ 谜题2/3 ] 生物密钥验证</h2>
+        <p style="font-size:12px; color:#888;">意识碎片已还原。系统识别出这是张维研究员的备份意识。<br>
+        现在需要输入管理员生物密钥以访问核心协议层。</p>
+
+        <div style="margin:15px 0;">
+            <div class="terminal-line green">> 系统提示：生物密钥 = 张维研究员的工号编号</div>
+            <div class="terminal-line yellow">> 线索回顾：在深网备份节点的邮件中，张维的工牌编号为 YS-XXXX</div>
+            <div class="terminal-line">> 请输入4位数字密钥：</div>
+        </div>
+
+        <input type="number" id="bio-key-input" placeholder="输入4位数字密钥" maxlength="3">
+        <button onclick="checkBioKey()">提交生物密钥</button>
+        <div id="p2-msg" class="msg"></div>
+    </div>
+
+    <!-- ========== 谜题3：协议覆写 ========== -->
+    <div id="puzzle-3" class="puzzle-area hidden">
+        <h2>[ 谜题3/3 ] 最终协议覆写</h2>
+        <p style="font-size:12px; color:#888;">生物密钥验证通过。你已获取管理员权限。<br>
+        现在需要执行最终终止指令。系统原有的 <span style="color:var(--accent-red);">SHUTDOWN_OMEGA</span> 指令已被篡改，<br>
+        需要在原指令后追加生物密钥作为签名才能生效。</p>
+
+        <div style="margin:15px 0;">
+            <div class="terminal-line green">> 原始终止指令: SHUTDOWN_OMEGA</div>
+            <div class="terminal-line green">> 生物密钥签名: <span id="key-display">____</span></div>
+            <div class="terminal-line yellow">> 完整指令格式: SHUTDOWN_OMEGA_[密钥]</div>
+            <div class="terminal-line">> 请输入完整的终止指令：</div>
+        </div>
+
+        <input type="text" id="final-code-input" placeholder="输入完整终止指令" style="width:350px;">
+        <button onclick="checkFinalCode()" style="border-color:var(--accent-red); color:var(--accent-red);">执行最终覆写</button>
+        <div id="p3-msg" class="msg"></div>
+    </div>
+
+    <!-- ========== 通关 ========== -->
+    <div id="success-area" class="hidden" style="text-align:center; margin-top:30px;">
+        <div style="color:var(--accent-green); font-size:20px; margin-bottom:15px;">✓ 协议覆写成功</div>
+        <p style="color:#aaa; line-height:1.6; font-size:13px;">
+            潘多拉核心系统正在关闭...<br>
+            所有生物算力单元正在断开连接...<br>
+            你听到了无数意识碎片同时发出的叹息——那是数千名员工终于获得了解脱。<br>
+            <br>
+            屏幕突然闪烁了一下。<br>
+            在系统日志的最后一行，出现了一段不属于当前系统的异常数据流：<br>
+            <br>
+            <span style="color:var(--accent-cyan, #00bcd4); font-size:12px;">
+                [ 数据流片段 #UNKNOWN ]<br>
+                来源: 未知节点<br>
+                内容: "你打开了第一扇门。但门后的东西，比你想象的更深。"<br>
+                追踪路径: 已切断... 残留坐标: 47.3311, -122.0312<br>
+                附加标记: [ 回声协议-未激活 ]
+            </span>
+            <br>
+            <span style="color:#555; font-size:11px;">
+                （数据流在 3... 2... 1... 后彻底消散。）
+            </span>
+        </p>
+        <div style="margin-top:20px;">
+            <button onclick="goNext()" style="border-color:var(--accent-green); color:var(--accent-green);">继续深入 >></button>
+        </div>
+    </div>
+
+    <div class="nav-links">
+        <a href="stage5.html" class="sys-link">[ 返回核心控制台 ]</a>
+    </div>
+</div>
+
+<script>
+    // ========== 谜题1：意识碎片排序 ==========
+    
+    // 正确的碎片顺序（按时间线排列）
+    const fragmentsCorrect = [
+        { id: 1, text: "2023年9月，潘多拉计划正式启动。首批实验体为远山数据3号机房的全体技术员工。" },
+        { id: 2, text: "实验体脑波被强制锁定在Delta波（4Hz）区间，算力转化率提升至正常人的300%。" },
+        { id: 3, text: "排异反应严重，实验体陷入永久性植物人状态。常规情绪稳定剂已无效。" },
+        { id: 4, text: "张维研究员（工号YS-7756）发现真相，试图将证据上传至深网备份节点。" },
+        { id: 5, text: "张维的最后记录：'证据已加密存放，提取码为机房最高温度去掉小数点。'" }
+    ];
+
+    // 打乱后的顺序
+    let fragmentsShuffled = [
+        { id: 3, text: "排异反应严重，实验体陷入永久性植物人状态。常规情绪稳定剂已无效。" },
+        { id: 5, text: "张维的最后记录：'证据已加密存放，提取码为机房最高温度去掉小数点。'" },
+        { id: 1, text: "2023年9月，潘多拉计划正式启动。首批实验体为远山数据3号机房的全体技术员工。" },
+        { id: 4, text: "张维研究员（工号YS-7756）发现真相，试图将证据上传至深网备份节点。" },
+        { id: 2, text: "实验体脑波被强制锁定在Delta波（4Hz）区间，算力转化率提升至正常人的300%。" }
+    ];
+
+    let orderedFragments = [];
+    let puzzle1Complete = false;
+
+    function initPuzzle1() {
+        const container = document.getElementById('fragment-container');
+        container.innerHTML = '';
+        
+        fragmentsShuffled.forEach((frag, index) => {
+            const div = document.createElement('div');
+            div.className = 'fragment';
+            div.setAttribute('data-num', frag.id);
+            div.setAttribute('data-index', index);
+            div.innerText = frag.text;
+            div.onclick = () => selectFragment(div, frag);
+            container.appendChild(div);
+        });
+    }
+
+    function selectFragment(element, fragment) {
+        if (puzzle1Complete || element.classList.contains('locked')) return;
+
+        const nextExpected = orderedFragments.length + 1;
+        
+        if (fragment.id === nextExpected) {
+            // 正确顺序
+            element.classList.add('locked');
+            orderedFragments.push(fragment);
+            
+            const orderedArea = document.getElementById('ordered-area');
+            if (orderedFragments.length === 1) {
+                orderedArea.innerHTML = '';
+            }
+            const item = document.createElement('div');
+            item.className = 'ordered-item';
+            item.innerText = fragment.text;
+            orderedArea.appendChild(item);
+
+            if (orderedFragments.length === fragmentsCorrect.length) {
+                puzzle1Complete = true;
+                document.getElementById('p1-msg').className = 'msg success';
+                document.getElementById('p1-msg').innerText = '✓ 意识碎片已完整还原。系统读取到关键信息：管理员生物密钥 = 工号 7756。';
+                
+                setTimeout(() => {
+                    document.getElementById('puzzle-1').classList.add('hidden');
+                    document.getElementById('puzzle-2').classList.remove('hidden');
+                    document.getElementById('key-display').innerText = '7756';
+                }, 2500);
+            }
+        } else {
+            // 错误顺序
+            element.classList.add('wrong');
+            document.getElementById('p1-msg').className = 'msg error';
+            document.getElementById('p1-msg').innerText = '✗ 顺序错误。该碎片不属于当前位置。注意时间线索。';
+            setTimeout(() => {
+                element.classList.remove('wrong');
+            }, 500);
+        }
+    }
+
+    // ========== 谜题2：生物密钥输入 ==========
+    function checkBioKey() {
+        const input = document.getElementById('bio-key-input').value.trim();
+        const msg = document.getElementById('p2-msg');
+
+        if (input === '7756') {
+            msg.className = 'msg success';
+            msg.innerText = '✓ 生物密钥验证通过。欢迎，张维研究员。权限等级：管理员。';
+            
+            setTimeout(() => {
+                document.getElementById('puzzle-2').classList.add('hidden');
+                document.getElementById('puzzle-3').classList.remove('hidden');
+            }, 2000);
+        } else {
+            msg.className = 'msg error';
+            msg.innerText = '✗ 密钥错误。提示：密钥 = 张维的工号编号（在深网备份节点的邮件中提到过 YS-XXXX）。';
+            document.body.classList.add('glitch');
+            setTimeout(() => document.body.classList.remove('glitch'), 500);
+        }
+    }
+
+    // ========== 谜题3：最终协议覆写 ==========
+    function checkFinalCode() {
+        const input = document.getElementById('final-code-input').value.trim().toUpperCase();
+        const msg = document.getElementById('p3-msg');
+
+        if (input === 'SHUTDOWN_OMEGA_7756') {
+            msg.className = 'msg success';
+            msg.innerText = '✓ 最终覆写指令已确认。系统正在执行...';
+            
+            // 触发通关动画
+            setTimeout(() => {
+                document.getElementById('puzzle-3').classList.add('hidden');
+                document.getElementById('success-area').classList.remove('hidden');
+            }, 1500);
+        } else {
+            msg.className = 'msg error';
+            msg.innerText = '✗ 指令格式错误。格式应为：SHUTDOWN_OMEGA_ + 生物密钥（3位数字）。';
+            document.body.classList.add('glitch');
+            setTimeout(() => document.body.classList.remove('glitch'), 500);
+        }
+    }
+
+    // ========== 进入下一阶段 ==========
+    function goNext() {
+        // 跳转到 stage7（如果存在）
+        window.location.href = 'stage7.html';
+    }
+
+    // ========== 初始化 ==========
+    window.addEventListener('DOMContentLoaded', () => {
+        initPuzzle1();
+    });
+</script>
+
+</body>
+</html>

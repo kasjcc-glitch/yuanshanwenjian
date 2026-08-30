@@ -1,0 +1,147 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stage 4 - 深网备份节点</title>
+    <style>
+        :root { --bg-color: #050505; --panel-bg: #0a0a0a; --text-main: #6a6a6a; --accent-green: #2e8b57; --accent-red: #b02020; --border-color: #1a1a1a; }
+        body { background: var(--bg-color); color: var(--text-main); font-family: 'Courier New', Courier, monospace; margin: 0; padding: 20px; height: 100vh; box-sizing: border-box; display: flex; justify-content: center; align-items: center; }
+        .window { width: 800px; background: var(--panel-bg); border: 1px solid var(--border-color); padding: 30px; box-shadow: 0 0 30px rgba(0,0,0,0.8); }
+        h1 { color: var(--accent-green); font-size: 18px; border-bottom: 1px dashed var(--border-color); padding-bottom: 10px; margin-bottom: 20px;}
+        .file-list { border: 1px solid var(--border-color); padding: 15px; background: #000; margin-bottom: 20px; }
+        .file-item { padding: 8px; cursor: pointer; transition: 0.2s; border-bottom: 1px dashed #222; }
+        .file-item:hover { background: #111; color: var(--accent-green); }
+        .content-box { border: 1px solid var(--border-color); padding: 15px; background: #080808; min-height: 150px; font-size: 13px; line-height: 1.6; color: #aaa; white-space: pre-wrap; display: none; }
+        .sys-link { display: inline-block; margin-top: 20px; padding: 10px 20px; border: 1px solid var(--border-color); color: var(--text-main); text-decoration: none; transition: 0.3s; font-size: 12px;}
+        .sys-link:hover { border-color: var(--accent-green); color: var(--accent-green); }
+        .next-stage { display: none; margin-top: 20px; padding: 15px; border: 1px solid var(--accent-green); color: var(--accent-green); text-align: center; cursor: pointer; transition: 0.3s; text-decoration: none; }
+        .next-stage:hover { background: var(--accent-green); color: #000; }
+    </style>
+</head>
+<body>
+    <div class="window">
+        <h1>[深网备份节点] 远山数据核心档案</h1>
+        
+        <div class="file-list">
+            <div class="file-item" onclick="showFile('log')"> 3号机房实验日志.txt</div>
+            <div class="file-item" onclick="showFile('email')"> 陈默的最后邮件.eml</div>
+            <div class="file-item" onclick="showFile('readme')"> 管理员笔记 README.md</div>
+            <div class="file-item" onclick="showFile('report')"> 713事件初步调查报告.txt</div>
+            <div class="file-item" onclick="showFile('employee')"> 员工异动记录_已归档.txt</div>
+            <div class="file-item" onclick="showFile('systemlog')"> 系统异常报告_20230713.log</div>
+            <div class="file-item" onclick="showFile('meeting')"> 会议纪要_7月13日紧急会议.txt</div>
+        </div>
+
+        <div id="content-log" class="content-box">[2023-10-31 02:45] 3号机房冷却系统异常，温度传感器读数：40.50°C。
+[2023-10-31 02:50] 强制重启冷却泵。
+[2023-10-31 02:58] 3号机房温度传感器读数：40.50°C。生物算力转化率下降。
+[2023-10-31 03:05] 紧急注入镇静剂-X9。系统崩溃，记录中断。</div>
+
+        <div id="content-email" class="content-box">发件人: 陈默 (YS-2046)
+收件人: 外部审计员
+主题: 紧急！潘多拉计划真相
+
+别相信系统面板。
+真正的管理员后台在代码库里。
+如果你在读这封邮件，说明我已经不在了。
+去查7月13日的事。
+一切都从那天开始失控的。</div>
+
+        <div id="content-readme" class="content-box"># 远山数据 - 潘多拉计划
+
+## 进度
+- 阶段一：生物算力转化测试 (已完成)
+- 阶段二：意识上传协议 (进行中)
+
+## 管理员备忘
+- 管理员账号: admin_03
+- 紧急关闭指令: SHUTDOWN_OMEGA (需在核心控制台输入)
+- 备注: 40.50 是个神奇的数字，值得留意</div>
+
+        <div id="content-report" class="content-box">[内部文件 - 限传阅]
+关于7月13日系统异常的情况说明
+
+2023年7月13日 23:47，第三数据中心B区冷却系统报告异常温度。
+响应团队到达时，B区主服务器已自动进入安全模式。
+
+初步排查发现:
+- 系统日志存在约30分钟的空白窗口
+- 事件发生时，一台测试终端处于活跃状态
+- 该终端的操作者于当日22:15提前离开
+
+后续:
+事件已按常规流程处理。
+相关记录已归档至内部系统。</div>
+
+        <div id="content-employee" class="content-box">员工异动记录（已归档）
+------------------------
+工号: 7756
+姓名: 张维
+岗位: 测试工程师
+部门: 潘多拉计划 - 生物算力组
+入职日期: 2022-03-15
+
+异动日期: 2023-07-13
+异动类型: 提前离岗
+异动原因: 个人原因（已审批）
+备注: 该员工在离岗前访问过B区核心服务器
+权限状态: 已暂停（待复核）</div>
+
+        <div id="content-systemlog" class="content-box">[2023-07-13 22:15:03] 用户 7756_ZW 登录 B区终端
+[2023-07-13 22:17:45] 访问路径: /core/experiment/89757
+[2023-07-13 22:18:12] 数据导出请求 - 已拒绝（权限不足）
+[2023-07-13 22:20:00] 用户 7756_ZW 切换至管理员模式
+[2023-07-13 22:20:01] 警告: 管理员模式未授权
+[2023-07-13 22:20:15] 系统日志服务被停止
+[2023-07-13 22:50:00] 系统日志服务重新启动
+[2023-07-13 22:50:01] 日志完整性检查: 发现30分钟数据缺失
+[2023-07-13 23:00:00] 事件已上报至安全部门</div>
+
+        <div id="content-meeting" class="content-box">会议纪要
+日期: 2023-07-14 09:00
+主题: 7月13日系统异常事件处理
+参会人员: 项目负责人、安全主管、IT运维
+
+会议内容:
+1. 7月13日夜间B区系统异常事件已初步调查完毕
+2. 事件定性为"内部操作失误"
+3. 相关人员已做谈话记录，暂不追究
+4. 加强B区访问权限管理
+5. 所有相关记录归档，不对外公开
+
+决议:
+- 事件等级: 内部B级
+- 对外口径: 冷却系统故障
+- 下次审查日期: 待定</div>
+
+        <a href="stage3.html" class="sys-link">[ 返回云盘 ]</a>
+        
+        <!-- 进入 Stage 5 的按钮 -->
+        <a href="stage5.html" class="next-stage" id="next-btn">[ 已解密全部文件 - 进入核心控制台：情感阈值覆写 ]</a>
+    </div>
+
+    <script>
+        let filesRead = 0;
+        const totalFiles = 7;
+        const nextBtn = document.getElementById('next-btn');
+
+        function showFile(id) {
+            document.querySelectorAll('.content-box').forEach(box => box.style.display = 'none');
+            const target = document.getElementById('content-' + id);
+            if(target) {
+                target.style.display = 'block';
+                if(!target.dataset.read) {
+                    target.dataset.read = 'true';
+                    filesRead++;
+                    if(filesRead >= totalFiles) {
+                        nextBtn.style.display = 'block';
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
