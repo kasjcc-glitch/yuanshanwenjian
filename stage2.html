@@ -1,0 +1,308 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stage 2 - 外部节点渗透</title>
+    <style>
+        :root { --bg-color: #050505; --panel-bg: #0a0a0a; --text-main: #6a6a6a; --accent-green: #2e8b57; --accent-red: #b02020; --border-color: #1a1a1a; }
+        body { background: var(--bg-color); color: var(--text-main); font-family: 'Courier New', Courier, monospace; margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        .window { width: 800px; background: var(--panel-bg); border: 1px solid var(--border-color); padding: 30px; box-shadow: 0 0 30px rgba(0,0,0,0.8); max-height: 90vh; overflow-y: auto; }
+        h1 { color: var(--accent-green); font-size: 18px; border-bottom: 1px dashed var(--border-color); padding-bottom: 10px; margin-bottom: 20px; }
+        .post { border: 1px solid var(--border-color); padding: 15px; margin-bottom: 15px; background: #080808; }
+        .user { color: var(--accent-green); font-weight: bold; margin-bottom: 5px; }
+        .time { font-size: 11px; color: #444; margin-bottom: 10px; }
+        .content { line-height: 1.6; font-size: 14px; }
+        .highlight { color: var(--accent-green); font-weight: bold; }
+        .warn { color: var(--accent-red); font-size: 12px; margin-top: 10px; }
+        .link { color: var(--accent-green); }
+
+        /* 按钮统一样式 */
+        .sys-link {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            border: 1px solid var(--border-color);
+            color: var(--accent-green);
+            text-decoration: none;
+            transition: 0.3s;
+            margin-right: 10px;
+        }
+        .sys-link:hover { background: var(--accent-green); color: #000; }
+
+        /* 评论展开/收起按钮 */
+        .comment-toggle {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 4px 12px;
+            border: 1px dashed #333;
+            color: #555;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            background: transparent;
+            font-family: inherit;
+        }
+        .comment-toggle:hover { border-color: var(--accent-green); color: var(--accent-green); }
+
+        /* 评论区 */
+        .comment-box {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+            background: #060606;
+            border-top: 1px solid #111;
+        }
+        .comment-box.open { max-height: 2000px; }
+        .comment-item {
+            padding: 8px 15px;
+            border-bottom: 1px solid #0f0f0f;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .comment-item:last-child { border-bottom: none; }
+        .comment-user { color: #4a9e3f; font-weight: bold; font-size: 12px; }
+        .comment-time { color: #333; font-size: 11px; margin-left: 8px; }
+        .comment-content { color: #555; margin-top: 4px; }
+        .comment-system { color: var(--accent-red); font-size: 11px; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="window">
+        <h1>[外部节点] 匿名者论坛 (Anonymous BBS)</h1>
+        <p>正在检索关键词: "远山数据" ... 找到 15 条相关帖子。</p>
+
+        <!-- 帖子1 -->
+        <div class="post">
+            <div class="user">User: Ghost_Walker</div>
+            <div class="time">2023-10-15 02:33 AM</div>
+            <div class="content">远山数据这家公司有点邪门。官网显示有5000名员工，但LinkedIn上能查到的在职人员不到2000。剩下的人去哪了？</div>
+            <button class="comment-toggle" onclick="toggleComments(this)">[ 展开 3 条评论 ]</button>
+            <div class="comment-box">
+                <div class="comment-item"><span class="comment-user">DeepDive_404</span><span class="comment-time">2023-10-15 03:10 AM</span><div class="comment-content">我也注意到了，他们离职率远高于行业平均水平。</div></div>
+                <div class="comment-item"><span class="comment-user">NullPointer</span><span class="comment-time">2023-10-15 08:22 AM</span><div class="comment-content">有没有可能只是数据造假？很多科技公司都这样。</div></div>
+                <div class="comment-item"><span class="comment-user">Ghost_Walker</span><span class="comment-time">2023-10-15 09:05 AM</span><div class="comment-content">我试过直接联系几个前员工，他们的社交媒体在离职后全部清空了，像是被统一处理过。</div></div>
+            </div>
+        </div>
+
+        <!-- 帖子2 -->
+        <div class="post">
+            <div class="user">User: SysAdmin_99</div>
+            <div class="time">2023-10-18 11:42 PM</div>
+            <div class="content">在远山数据做运维的哥们告诉我，地下三层的"生物液冷"管道总是有奇怪的震动，频率很规律，像心跳一样。他说是正常现象，但我查了液冷系统的技术参数，不应该有这种低频震动。</div>
+            <button class="comment-toggle" onclick="toggleComments(this)">[ 展开 2 条评论 ]</button>
+            <div class="comment-box">
+                <div class="comment-item"><span class="comment-user">DeepDive_404</span><span class="comment-time">2023-10-19 02:15 AM</span><div class="comment-content">液冷管道震动？你有没有录下来？发给我看看。</div></div>
+                <div class="comment-item"><span class="comment-user">SysAdmin_99</span><span class="comment-time">2023-10-19 09:30 AM</span><div class="comment-content">录了，但发出来之前被主管发现了，让我删掉。说是不想惹麻烦。</div></div>
+            </div>
+        </div>
+
+        <!-- 帖子3 -->
+        <div class="post">
+            <div class="user">User: DeepDive_404</div>
+            <div class="time">2023-10-22 09:15 PM</div>
+            <div class="content">有人注意到远山数据最近频繁招聘"生物信息学"方向的工程师吗？这公司不是做AI的么，要生物信息学干什么？</div>
+            <button class="comment-toggle" onclick="toggleComments(this)">[ 展开 1 条评论 ]</button>
+            <div class="comment-box">
+                <div class="comment-item"><span class="comment-user">ShadowNet</span><span class="comment-time">2023-10-23 01:45 AM</span><div class="comment-content">JD里还要求精通脑机接口底层协议和液冷散热设计。这到底是做生物的还是做服务器的？</div></div>
+            </div>
+        </div>
+
+        <!-- 帖子4 -->
+        <div class="post">
+            <div class="user">User: ShadowNet</div>
+            <div class="time">2023-10-28 11:42 PM</div>
+            <div class="content">我有个朋友在远山数据做外包，他说公司地下三层有个"禁区"，连内部员工都不能进。上周他偷偷拍了一张照片，里面全是服务器，但散热系统看起来像是给生物体用的。</div>
+            <button class="comment-toggle" onclick="toggleComments(this)">[ 展开 0 条评论 ]</button>
+            <div class="comment-box">
+                <div class="comment-item comment-system">[ 该图片已被系统自动删除，原因：涉及版权投诉 ]</div>
+            </div>
+        </div>
+
+        <!-- 帖子5 -->
+        <div class="post">
+            <div class="user">User: DataMiner_X</div>
+            <div class="time">2023-11-02 03:20 AM</div>
+            <div class="content">我用爬虫监控远山数据的服务器流量，发现每天凌晨3:00-4:00会有规律性的算力峰值，但他们的官网和APP在这个时间段没有任何官方任务在跑。这些算力去哪了？</div>
+            <button class="comment-toggle" onclick="toggleComments(this)">[ 展开 2 条评论 ]</button>
+            <div class="comment-box">
+                <div class="comment-item"><span class="comment-user">NullPointer</span><span class="comment-time">2023-11-02 08:10 AM</span><div class="comment-content">你有没有追踪过流量目的地？</div></div>
+                <div class="comment-item"><span class="comment-user">DataMiner_X</span><span class="comment-time">2023-11-02 10:30 AM</span><div class="comment-content">追踪了，流量全部指向一个内网IP段，外网出口只有一个，带宽很小，说明数据不是往外传的，而是在内部循环处理。</div></div>
+            </div>
+        </div>
+
+        <!-- 帖子6 -->
+        <div class="post">
+            <div class="user">User: ChenMo_Dev</div>
+            <div class="time">2023-11-03 01:22 AM</div>
+            <div class="content">
+                远山数据在做的不是人工智能，是意识上传。他们把离职员工的脑电波数据当作训练集，美其名曰"盖亚协议"。<br>
+                我已经拿到了核心服务器的访问权限，证据正在打包。如果有人想查，去翻2023年10月的服务器日志，IP地址最后一段是 192.168.3.113。<br>
+                提取码是我离开公司那天，机房温度飙升到的最高度数——<strong class="highlight">40.50度</strong>。记住，去掉小数点。
+            </div>
+            <button class="comment-toggle" onclick="toggleComments(this)">[ 展开 4 条评论 ]</button>
+            <div class="comment-box">
+                <div class="comment-item"><span class="comment-user">NullPointer</span><span class="comment-time">2023-11-03 02:15 AM</span><div class="comment-content">你说的意识上传……你是说把人 consciousness 上传到服务器？这不可能。</div></div>
+                <div class="comment-item"><span class="comment-user">ShadowNet</span><span class="comment-time">2023-11-03 03:00 AM</span><div class="comment-content">我查了你说的IP，属于远山内部测试网段，但这个网段上周就已经注销了。</div></div>
+                <div class="comment-item"><span class="comment-user">System_Auto</span><span class="comment-time">2023-11-03 03:05 AM</span><div class="comment-content" style="color:var(--accent-red);">[系统警告] 该帖子已被标记为"高风险"，正在审核中。</div></div>
+                <div class="comment-item comment-system">[ 该账号已被系统永久封禁，所有帖子已隐藏 ]</div>
+            </div>
+        </div>
+
+        <!-- 帖子7 -->
+        <div class="post">
+            <div class="user">User: NullPointer</div>
+            <div class="time">2023-11-04 08:33 AM</div>
+            <div class="content">ChenMo_Dev 这个账号最近很活跃，但内容越来越激进。有人在深网论坛上看到过他的IP轨迹，最后消失的位置是深圳。</div>
+            <button class="comment-toggle" onclick="toggleComments(this)">[ 展开 2 条评论 ]</button>
+            <div class="comment-box">
+                <div class="comment-item"><span class="comment-user">Ghost_Walker</span><span class="comment-time">2023-11-04 10:20 AM</span><div class="comment-content">我查了他的注册信息，用的是假名，但邮箱后缀是远山数据的内部域名。</div></div>
+                <div class="comment-item"><span class="comment-user">DataMiner_X</span><span class="comment-time">2023-11-04 01:45 PM</span><div class="comment-content">有没有可能这个人根本不是远山的员工，而是远山放出来的钓鱼账号？</div></div>
+            </div>
+        </div>
+
+        <!-- 帖子8 -->
+        <div class="post">
+            <div class="user">User: LostInCode</div>
+            <div class="time">2023-11-05 06:12 PM</div>
+            <div class="content">我姐姐在远山数据做财务，上个月突然说"公司调整"就离职了。联系不上她，她手机关机，社交媒体全部停用。她家人去她租的房子，东西还在，但衣柜里所有衣服都不见了，像是被人统一处理过。</div>
+            <button class="comment-toggle" onclick="toggleComments(this)">[ 展开 3 条评论 ]</button>
+            <div class="comment-box">
+                <div class="comment-item"><span class="comment-user">Ghost_Walker</span><span class="comment-time">2023-11-05 07:00 PM</span><div class="comment-content">你姐姐叫什么名字？我帮你查一下。</div></div>
+                <div class="comment-item"><span class="comment-user">LostInCode</span><span class="comment-time">2023-11-05 07:30 PM</span><div class="comment-content">她叫王晓红，工号8841。求你们帮帮我，她不会出什么事吧？</div></div>
+                <div class="comment-item comment-system">[ 该账号于2023-11-06 02:00 AM被系统自动封禁，原因：涉嫌散布虚假信息 ]</div>
+            </div>
+        </div>
+
+        <!-- 帖子9 -->
+        <div class="post">
+            <div class="user">User: Ghost_Walker</div>
+            <div class="time">2023-11-05 11:20 PM</div>
+            <div class="content">ChenMo_Dev 的账号被封了。他最后发的帖子内容被系统自动删除，但缓存里还能看到。有人说他根本不是远山的员工，而是一个AI代理。</div>
+            <button class="comment-toggle" onclick="toggleComments(this)">[ 展开 4 条评论 ]</button>
+            <div class="comment-box">
+                <div class="comment-item"><span class="comment-user">NullPointer</span><span class="comment-time">2023-11-06 08:00 AM</span><div class="comment-content">如果他是AI，那远山在AI论坛上发帖钓鱼，说明他们知道有人在查他们。</div></div>
+                <div class="comment-item"><span class="comment-user">ShadowNet</span><span class="comment-time">2023-11-06 09:15 AM</span><div class="comment-content">我试着访问了他提到的IP地址 192.168.3.113，已经无法连接了。端口全部关闭。</div></div>
+                <div class="comment-item"><span class="comment-user">DeepDive_404</span><span class="comment-time">2023-11-06 11:30 AM</span><div class="comment-content">有没有人注意到，ChenMo发帖的时间都是凌晨1-3点？这个时间段远山的服务器算力峰值最高。</div></div>
+                <div class="comment-item"><span class="comment-user">DataMiner_X</span><span class="comment-time">2023-11-06 01:00 PM</span><div class="comment-content">我查了远山的专利申请，有一个"基于神经突触映射的意识数据压缩方法"，申请日期是2023年9月，发明人里有个"陈默"。</div></div>
+            </div>
+        </div>
+
+        <!-- 帖子10 -->
+        <div class="post">
+            <div class="user">User: DeepDive_404</div>
+            <div class="time">2023-11-06 03:45 AM</div>
+            <div class="content">我查到了远山数据的注册地址，是个废弃的仓库。但他们的服务器机房据说建在城市地下40米的地方，电力消耗相当于一个小城镇。这合理吗？</div>
+            <button class="comment-toggle" onclick="toggleComments(this)">[ 展开 1 条评论 ]</button>
+            <div class="comment-box">
+                <div class="comment-item"><span class="comment-user">Ghost_Walker</span><span class="comment-time">2023-11-06 10:00 AM</span><div class="comment-content">我查了工商登记的地址，那个地方三年前就已经被拆了，现在是一片废弃的工业仓库。但他们每个月还在按时缴纳高昂的工业用电费用。那栋建筑地下到底藏着什么？</div></div>
+            </div>
+        </div>
+
+        <!-- 帖子11 -->
+        <div class="post">
+            <div class="user">User: ShadowNet</div>
+            <div class="time">2023-11-08 10:05 PM</div>
+            <div class="content">远山数据在2023年11月期间有多名员工同时提交离职申请，HR部门全部以"个人原因"统一回复。这种集体离职在业内非常罕见，背后一定有原因。</div>
+            <button class="comment-toggle" onclick="toggleComments(this)">[ 展开 6 条评论 ]</button>
+            <div class="comment-box">
+                <div class="comment-item"><span class="comment-user">NullPointer</span><span class="comment-time">2023-11-09 08:00 AM</span><div class="comment-content">我查了社保记录，这些人离职第二天社保账户就被注销了。正常离职不会这么快注销社保。</div></div>
+                <div class="comment-item"><span class="comment-user">Ghost_Walker</span><span class="comment-time">2023-11-09 09:30 AM</span><div class="comment-content">我试着查了其中几个人的身份信息，发现他们入职时间都不长，最短的只有3个月。而且入职渠道全是同一个劳务派遣公司。</div></div>
+                <div class="comment-item"><span class="comment-user">DataMiner_X</span><span class="comment-time">2023-11-09 11:00 AM</span><div class="comment-content">那个劳务派遣公司也是空壳，注册地址和远山一样，都是那个废弃仓库。</div></div>
+                <div class="comment-item"><span class="comment-user">DeepDive_404</span><span class="comment-time">2023-11-09 01:00 PM</span><div class="comment-content">有没有一种可能，这些人根本不是被"辞退"的，而是被"转化"了？</div></div>
+                <div class="comment-item comment-system">[ 系统提示: 本帖包含敏感关键词，已限制非认证用户查看完整内容 ]</div>
+            </div>
+        </div>
+
+        <!-- 帖子12 -->
+        <div class="post">
+            <div class="user">User: Ghost_Walker</div>
+            <div class="time">2023-11-09 06:30 PM</div>
+            <div class="content">追踪了 ChenMo 帖子中的 IP 192.168.3.113，发现该 IP 属于一个已注销的内部测试网段。但这个网段在2023年10月28日之后就不再存在于远山的网络拓扑中，像是被彻底抹去了。</div>
+            <button class="comment-toggle" onclick="toggleComments(this)">[ 展开 2 条评论 ]</button>
+            <div class="comment-box">
+                <div class="comment-item"><span class="comment-user">ShadowNet</span><span class="comment-time">2023-11-09 08:00 PM</span><div class="comment-content">你查过这个网段在注销之前有没有对外传输过大量数据？</div></div>
+                <div class="comment-item"><span class="comment-user">Ghost_Walker</span><span class="comment-time">2023-11-09 08:30 PM</span><div class="comment-content">有，而且量很大。2023-10-28 凌晨3:12到3:15，三分钟传了47GB出去，目的地是一个加密的境外节点。</div></div>
+            </div>
+        </div>
+
+        <!-- 帖子13 -->
+        <div class="post">
+            <div class="user">User: System_Announcement</div>
+            <div class="time">2023-11-10 12:00 AM</div>
+            <div class="content" style="color:var(--accent-red);">[系统公告] 根据《社区安全协议》第7.3条，以下用户因多次发布未经核实的信息，已被永久封禁：LostInCode(工号N/A)、ChenMo_Dev(工号0001)。所有相关帖子已归档，访问需S级权限。</div>
+            <button class="comment-toggle" onclick="toggleComments(this)">[ 展开 0 条评论 ]</button>
+            <div class="comment-box"></div>
+        </div>
+
+        <!-- 帖子14 -->
+        <div class="post">
+            <div class="user">User: NullPointer</div>
+            <div class="time">2023-11-10 04:15 AM</div>
+            <div class="content">我整理了一份远山数据离职员工名单，发现了一个规律：所有离职员工的脑电波数据在离职后72小时内都会被上传到同一个服务器。这个服务器的名字叫做"盖亚-01"。</div>
+            <button class="comment-toggle" onclick="toggleComments(this)">[ 展开 1 条评论 ]</button>
+            <div class="comment-box">
+                <div class="comment-item"><span class="comment-user">DataMiner_X</span><span class="comment-time">2023-11-10 09:00 AM</span><div class="comment-content">我试着扫描了这个服务器，端口全部过滤。但有一个特征：它响应的时间间隔是7.83Hz，正好是舒曼共振的频率。这不像普通服务器。</div></div>
+            </div>
+        </div>
+
+        <!-- 帖子15 -->
+        <div class="post">
+            <div class="user">User: Ghost_Walker</div>
+            <div class="time">2023-11-10 11:45 PM</div>
+            <div class="content">我找到了远山数据的一个前保安，他说地下三层的机房里不止有服务器。有一间特殊的"培养室"，里面有一些……东西。他不敢说那是什么，但他说那些东西"在动"。第二天他就消失了，连社保记录都被注销了。</div>
+            <button class="comment-toggle" onclick="toggleComments(this)">[ 展开 3 条评论 ]</button>
+            <div class="comment-box">
+                <div class="comment-item"><span class="comment-user">ShadowNet</span><span class="comment-time">2023-11-11 08:00 AM</span><div class="comment-content">这个前保安叫什么名字？</div></div>
+                <div class="comment-item"><span class="comment-user">DeepDive_404</span><span class="comment-time">2023-11-11 09:30 AM</span><div class="comment-content">我查了，他叫赵明辉，工号6655，安保部。离职日期是2023-11-09，状态标记为"已转化"。</div></div>
+                <div class="comment-item comment-system">[ 系统警告: 本帖内容触发敏感词过滤，已提交人工审核 ]</div>
+            </div>
+        </div>
+        
+        <!-- 新增：陈默的紧急警告帖子 -->
+        <div class="post">
+            <div class="user">User: ChenMo_Dev</div>
+            <div class="time">2023-11-02 23:55 PM</div>
+            <div class="content">不要相信他们!不要相信他们!不要相信他们!张维的工号和入职时间还有权限，你们自己看。</div>
+            <div class="warn">[ 该账号已被系统标记为高危 ]</div>
+        </div>
+        <!-- 新增帖子：全拼线索 -->
+        <div class="post">
+            <div class="user">User: DeepDive_404</div>
+            <div class="time">2023-11-07 04:20 AM</div>
+            <div class="content">刚才试着进了远山数据的员工档案系统，发现它的解锁密码好像用的是全拼。我随便试了个"陈默"的拼音，居然进去了。这公司安全部门是吃干饭的吗？</div>
+            <button class="comment-toggle" onclick="toggleComments(this)">[ 展开 3 条评论 ]</button>
+            <div class="comment-box">
+                <div class="comment-item"><span class="comment-user">NullPointer</span><span class="comment-time">2023-11-07 08:15 AM</span><div class="comment-content">全拼？你是说用中文拼音当密码？这也太随意了吧。</div></div>
+                <div class="comment-item"><span class="comment-user">ShadowNet</span><span class="comment-time">2023-11-07 10:45 AM</span><div class="comment-content">说不定他们用的就是员工姓名的全拼。你可以试试其他人的名字。</div></div>
+                <div class="comment-item"><span class="comment-user">DeepDive_404</span><span class="comment-time">2023-11-07 01:20 PM</span><div class="comment-content">试了几个不锁的没意义，锁着的几个还没想到对应的拼音。</div></div>
+            </div>
+        </div>
+        <div style="margin-top: 30px;">
+          
+            <a href="index.html" class="sys-link">[ 返回主页 ]</a>
+        </div>
+    </div>
+
+    <script>
+        function toggleComments(btn) {
+            const box = btn.nextElementSibling;
+            const isOpen = box.classList.contains('open');
+            if (isOpen) {
+                box.classList.remove('open');
+                btn.innerText = btn.innerText.replace('收起', '展开');
+                // 恢复评论数
+                const match = btn.innerText.match(/\d+/);
+                if (match) {
+                    btn.innerText = btn.innerText.replace(/\d+/, match[0]);
+                }
+            } else {
+                box.classList.add('open');
+                btn.innerText = btn.innerText.replace('展开', '收起');
+            }
+        }
+    </script>
+</body>
+</html>

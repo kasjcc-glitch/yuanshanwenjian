@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stage 6 - 潘多拉核心 [DOS_MODE]</title>
+    <style>
+        :root { 
+            --bg-color: #000000; 
+            --terminal-bg: #050505; 
+            --text-dim: #4a4a4a; 
+            --text-main: #888888; 
+            --accent-green: #33ff33; 
+            --accent-red: #ff3333; 
+            --border-color: #333333; 
+        }
+
+        body { 
+            background: var(--bg-color); 
+            color: var(--text-main); 
+            font-family: 'Courier New', 'Lucida Console', monospace; 
+            margin: 0; 
+            padding: 20px; 
+            height: 100vh; 
+            box-sizing: border-box; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            overflow: hidden;
+        }
+
+        .crt-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            z-index: 999;
+            animation: flicker 0.15s infinite;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.97; }
+            50% { opacity: 1; }
+            100% { opacity: 0.98; }
+        }
+
+        .window { 
+            width: 900px; 
+            background: var(--terminal-bg); 
+            border: 2px solid var(--accent-green); 
+            padding: 2px; 
+            box-shadow: 0 0 20px rgba(51, 255, 51, 0.1); 
+            max-height: 90vh; 
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .inner-window {
+            border: 1px solid var(--border-color);
+            padding: 30px;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .inner-window::-webkit-scrollbar { width: 8px; }
+        .inner-window::-webkit-scrollbar-track { background: #000; }
+        .inner-window::-webkit-scrollbar-thumb { background: var(--accent-green); }
+
+        h1 { 
+            color: var(--accent-green); 
+            font-size: 16px; 
+            text-transform: uppercase;
+            border-bottom: 2px dashed var(--border-color); 
+            padding-bottom: 10px; 
+            margin-top: 0; 
+            margin-bottom: 20px; 
+            letter-spacing: 1px;
+            text-shadow: 0 0 5px rgba(51, 255, 51, 0.5);
+        }
+
+        h2 { 
+            color: var(--accent-green); 
+            font-size: 14px; 
+            margin-top: 0;
+            margin-bottom: 15px; 
+            font-weight: normal;
+        }
+        
+        h2::before { content: "> "; }
+
+        .desc-text {
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--text-main);
+            margin-bottom: 20px;
+            border-left: 2px solid var(--text-dim);
+            padding-left: 10px;
+        }
+
+        .puzzle-area { 
+            border: 1px solid var(--border-color); 
+            background: #000; 
+            padding: 20px; 
+            margin-bottom: 20px; 
+        }
+        
+        .fragment-container { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+            margin-bottom: 20px; 
+        }
+        .fragment { 
+            border: 1px solid var(--text-dim); 
+            padding: 10px; 
+            cursor: pointer; 
+            transition: all .1s; 
+            font-size: 13px; 
+            color: var(--text-main); 
+            background: #000;
+            user-select: none;
+        }
+        
+        .fragment:hover { 
+            border-color: var(--accent-green); 
+            color: #000; 
+            background: var(--accent-green); 
+            font-weight: bold;
+        }
+
+        /* 选中后变暗，且不再响应点击 */
+        .fragment.selected { 
+            border-color: var(--text-dim); 
+            color: var(--text-dim); 
+            background: #0a0a0a; 
+            cursor: default; 
+            text-decoration: line-through;
+        }
+
+        .fragment.error { 
+            border-color: var(--accent-red); 
+            color: #000; 
+            background: var(--accent-red);
+            font-weight: bold;
+            animation: shake .3s; 
+        }
+        
+        .ordered-area { 
+            border: 1px solid var(--accent-green); 
+            background: #000; 
+            padding: 15px; 
+            min-height: 80px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+        }
+        .ordered-area .ordered-item { 
+            color: var(--accent-green); 
+            font-size: 13px; 
+            padding-left: 10px; 
+            border-left: 2px solid var(--accent-green);
+            animation: typeIn .3s steps(10) forwards;
+        }
+
+        .ordered-area .ordered-item.error-state {
+            color: var(--accent-red);
+            border-left-color: var(--accent-red);
+            background: rgba(255, 51, 51, 0.05);
+        }
+        
+        .msg { 
+            margin-top: 15px; 
+            font-size: 13px; 
+            min-height: 20px; 
+            font-weight: bold;
+        }
+        .msg.success { color: var(--accent-green); text-shadow: 0 0 5px var(--accent-green); } 
+        .msg.error { color: var(--accent-red); text-shadow: 0 0 5px var(--accent-red); }
+        
+        .hidden { display: none !important; }
+        
+        @keyframes typeIn { from { width: 0; opacity: 0; } to { width: 100%; opacity: 1; } }
+        @keyframes shake { 
+            0% { transform: translate(1px, 1px) rotate(0deg); } 
+            10% { transform: translate(-1px, -2px) rotate(-1deg); } 
+            20% { transform: translate(-3px, 0px) rotate(1deg); } 
+            30% { transform: translate(3px, 2px) rotate(0deg); } 
+            40% { transform: translate(1px, -1px) rotate(1deg); } 
+            50% { transform: translate(-1px, 2px) rotate(-1deg); } 
+            60% { transform: translate(-3px, 1px) rotate(0deg); } 
+            70% { transform: translate(3px, 1px) rotate(-1deg); } 
+            80% { transform: translate(-1px, -1px) rotate(1deg); } 
+            90% { transform: translate(1px, 2px) rotate(0deg); } 
+            100% { transform: translate(1px, -2px) rotate(-1deg); } 
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+            margin-bottom: 20px;
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+    </style>
+</head>
+<body>
+
+<div class="crt-overlay"></div>
+
+<div class="window">
+    <div class="inner-window">
+        <div class="status-bar">
+            <span>MEMORY: 640K OK</span>
+            <span>C:\PANDORA\CORE\STAGE_6.EXE</span>
+        </div>
+
+        <h1>// 潘多拉核心 - 意识深渊 //</h1>
+
+        <div id="puzzle-1" class="puzzle-area">
+            <h2>意识碎片拼凑</h2>
+            <p class="desc-text">系统检测到数据损坏。请手动重组以下内存碎片以还原日志。</p>
+            
+            <!-- 待选碎片区 -->
+            <div class="fragment-container" id="fragment-container"></div>
+            
+            <!-- 结果展示区 -->
+            <div style="font-size:12px; color:var(--text-dim); margin-bottom:8px;">[OUTPUT_LOG]:</div>
+            <div class="ordered-area" id="ordered-area">
+                <div style="color:var(--text-dim); font-size:12px; align-self: center; padding: 20px 0;">_WAITING_FOR_INPUT...</div>
+            </div>
+            
+            <div id="p1-msg" class="msg"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const fragmentsCorrect = [
+        { id: 1, text: "2023年9月，潘多拉计划正式启动。首批实验体为远山数据3号机房的全体技术员工。" },
+        { id: 2, text: "实验体脑波被强制锁定在Delta波（7.8Hz）区间，算力转化率提升至正常人的300%。" },
+        { id: 3, text: "排异反应严重，实验体陷入永久性植物人状态。常规情绪稳定剂已无效。" },
+        { id: 4, text: "张维研究员（工号YS-7756）发现真相，试图将证据上传至深网备份节点。" },
+        { id: 5, text: "张维的最后记录：'证据已加密存放，提取码为机房最高温度去掉小数点。'" }
+    ];
+
+    // Fisher-Yates 洗牌：返回原数组的随机乱序副本，不改动入参
+    function shuffleArray(arr) {
+        const a = arr.slice();
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+    }
+
+    // 生成一份乱序，若恰好等于正确顺序则重洗，避免“一打开就已排对”
+    function buildShuffled() {
+        let order;
+        do {
+            order = shuffleArray(fragmentsCorrect);
+        } while (order.every((f, idx) => f.id === fragmentsCorrect[idx].id));
+        return order;
+    }
+
+    let fragmentsShuffled = [];          // 运行时随机生成
+    let orderedFragments = [];
+    let puzzle1Complete = false;
+    let isProcessingResult = false;      // 锁定防误触
+
+    function initPuzzle1() {
+        // 每次初始化（含错误重置后）都重新随机洗牌
+        fragmentsShuffled = buildShuffled();
+
+        const container = document.getElementById('fragment-container');
+        container.innerHTML = '';
+
+        fragmentsShuffled.forEach((frag) => {
+            const div = document.createElement('div');
+            div.className = 'fragment';
+            div.setAttribute('data-id', frag.id);
+            div.innerText = frag.text;
+            div.onclick = () => selectFragment(div, frag);
+            container.appendChild(div);
+        });
+    }
+
+    function selectFragment(element, fragment) {
+        // 如果正在处理结果或该碎片已被选中，不执行任何操作
+        if (puzzle1Complete || isProcessingResult || element.classList.contains('selected')) return;
+
+        // 标记上方为已选中状态
+        element.classList.add('selected');
+
+        // 将碎片追加到下方结果区，并保存本次点击的元素引用
+        orderedFragments.push({ ...fragment, elRef: element });
+
+        const orderedArea = document.getElementById('ordered-area');
+        if (orderedFragments.length === 1) orderedArea.innerHTML = '';
+
+        const item = document.createElement('div');
+        item.className = 'ordered-item';
+        item.innerText = `>> ${fragment.text}`;
+        orderedArea.appendChild(item);
+
+        // 检查是否选满了5个
+        if (orderedFragments.length === fragmentsCorrect.length) {
+            checkFinalResult();
+        }
+    }
+
+    function checkFinalResult() {
+        isProcessingResult = true;
+        const msg = document.getElementById('p1-msg');
+        let isAllCorrect = true;
+
+        // 逐个对比
+        for (let i = 0; i < fragmentsCorrect.length; i++) {
+            const orderedItem = document.querySelectorAll('.ordered-item')[i];
+
+            if (orderedFragments[i].id === fragmentsCorrect[i].id) {
+                // 当前行正确，保持默认绿色
+            } else {
+                // 当前行错误：同时标红“已排序区这一行”和“上方被点击的原碎片”
+                isAllCorrect = false;
+                if (orderedItem) orderedItem.classList.add('error-state');
+                if (orderedFragments[i].elRef) orderedFragments[i].elRef.classList.add('error');
+            }
+        }
+
+        if (isAllCorrect) {
+            puzzle1Complete = true;
+            msg.className = 'msg success';
+            msg.innerText = 'DATA_RESTORED_SUCCESSFULLY. LOADING_NEXT_MODULE...';
+            setTimeout(() => window.location.href = 'stage6_2.html', 2000);
+        } else {
+            msg.className = 'msg error';
+            msg.innerText = 'DATA_CORRUPTION. SEQUENCE_MISMATCH. RESETTING MEMORY IN 3s...';
+
+            // 3秒后重置（重置时会再次随机洗牌）
+            setTimeout(() => {
+                orderedFragments = [];
+                isProcessingResult = false;
+                initPuzzle1();
+
+                const orderedArea = document.getElementById('ordered-area');
+                orderedArea.innerHTML = '<div style="color:var(--text-dim); font-size:12px; align-self: center; padding: 20px 0;">_WAITING_FOR_INPUT...</div>';
+
+                msg.innerText = '';
+                msg.className = 'msg';
+            }, 3000);
+        }
+    }
+
+    initPuzzle1();
+</script>
+
+</body>
+</html>

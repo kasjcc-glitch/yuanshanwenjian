@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>远山数据 · 内部云盘</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Courier New", monospace;
+    background: #0a0a0a;
+    color: #c8c8c8;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px 20px;
+  }
+  .container {
+    max-width: 720px;
+    width: 100%;
+  }
+  h1 {
+    font-size: 1.2rem;
+    color: #4a9;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+    margin-bottom: 24px;
+    letter-spacing: 2px;
+  }
+  .file-list {
+    list-style: none;
+  }
+  .file-list li {
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    background: #111;
+    border: 1px solid #222;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    font-size: 0.95rem;
+  }
+  .file-list li:hover {
+    background: #1a1a1a;
+    border-color: #4a9;
+  }
+  .file-list li.read {
+    color: #555;
+    text-decoration: line-through;
+  }
+  .viewer {
+    display: none;
+    margin-top: 24px;
+    background: #0e0e0e;
+    border: 1px solid #333;
+    padding: 20px;
+    white-space: pre-wrap;
+    line-height: 1.8;
+    font-size: 0.9rem;
+    color: #b8b8b8;
+    min-height: 200px;
+  }
+  .viewer.active { display: block; }
+  .back-btn {
+    display: none;
+    margin-top: 16px;
+    padding: 8px 18px;
+    background: #1a1a1a;
+    border: 1px solid #4a9;
+    color: #4a9;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9rem;
+  }
+  .back-btn:hover { background: #222; }
+  .back-btn.active { display: inline-block; }
+  .unlock-btn {
+    display: none;
+    margin-top: 20px;
+    padding: 10px 20px;
+    background: #1a2a1a;
+    border: 1px solid #4a9;
+    color: #4a9;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.95rem;
+    text-align: center;
+    width: 100%;
+    animation: pulse 2s infinite;
+  }
+  .unlock-btn.active { display: block; }
+  .unlock-btn:hover { background: #223322; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+  .progress {
+    margin-top: 16px;
+    font-size: 0.8rem;
+    color: #555;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>[ 远山数据 · 内部云盘 / 归档区 ]</h1>
+  <ul class="file-list" id="fileList">
+    <li data-file="lab3">3号机房实验日志.txt</li>
+    <li data-file="chenmo">陈默的最后邮件.eml</li>
+    <li data-file="readme">管理员笔记 README.md</li>
+    <li data-file="report713">713事件初步调查报告.txt</li>
+    <li data-file="transfer">员工异动记录_已归档.txt</li>
+    <li data-file="syslog">系统异常报告_20230713.log</li>
+    <li data-file="meeting">会议纪要_7月13日紧急会议.txt</li>
+    <li data-file="pipe">地下三层巡检记录_B区液冷.txt</li>
+  </ul>
+  <div class="progress" id="progress">已阅读: 0 / 8</div>
+  <div class="viewer" id="viewer"></div>
+  <button class="back-btn" id="backBtn">[ 返回列表 ]</button>
+  <a href="stage5.html" class="unlock-btn" id="unlockBtn">[ 已解密全部文件 - 进入核心控制台：情感阈值覆写 ]</a>
+</div>
+
+<script>
+const files = {
+  lab3: `3号机房实验日志
+日期：2023-06-28
+记录人：张维
+
+今日完成第14轮意识上传测试。
+受试者：志愿者 #07（男，29岁）
+上传时长：47分钟
+同步率峰值：91.3%
+
+异常记录：
+受试者在上传过程中多次出现"我不确定我还在"的表述。
+脑波监测显示杏仁核活跃度持续偏高，但前额叶信号正常。
+张维备注：情绪模块的抑制参数需要下调，否则受试者会在虚拟环境中产生不必要的恐惧反应。
+
+结论：第14轮测试通过，进入下一阶段。`,
+
+  chenmo: `发件人：陈默 <chenmo@yuanshandata.com>
+收件人：张维 <zhangwei@yuanshandata.com>
+日期：2023-07-12 23:47
+主题：关于713测试的疑虑
+
+张博：
+
+我知道不该问，但我必须说——713测试的受试者名单里，为什么没有签署知情同意书？
+我查了档案，#07到#12这六个人，没有任何一份自愿参与的文件。
+
+还有，昨晚我路过3号机房，听到里面有声音。不是机器的声音，是人在哭。
+我知道你说过那是音频泄漏，但我在那里工作了三年，我分得清什么是机器什么是人。
+
+如果你不给我一个解释，我会把这件事上报。
+
+陈默`,
+
+  readme: `# 管理员笔记
+## 2023-07-13
+
+今天又是奇怪的一天。
+
+张博让我把3号机房的监控录像全部删除，说是"数据清理"。我照做了，但备份服务器里还留了一份。
+
+下午收到陈默的邮件，他好像在调查什么。我没回复他，我不想卷入这种事。
+
+晚上巡检的时候，发现地下三层的门禁权限被修改了。原本我有B区权限，现在变成了"仅限张维"。
+
+地下三层到底在做什么？`,
+
+  report713: `713事件初步调查报告
+编号：YS-IR-2023-0713
+密级：绝密
+
+事件概述：
+2023年7月13日凌晨02:17，3号机房在执行第21轮意识上传测试时，系统出现不可逆异常。
+受试者 #12（男，34岁）在上传完成后出现意识碎片化，无法完整回收。
+
+技术细节：
+- 上传同步率在02:17:33骤降至12%
+- 受试者脑波信号呈现"弥散态"，无法定位意识主体
+- 虚拟环境中检测到多个异常意识体，行为模式不符合预设
+
+处理措施：
+1. 立即终止测试，切断物理连接
+2. 受试者 #12 转入医疗监护（当前状态：植物人）
+3. 所有相关数据封存，等待进一步评估
+
+调查组备注：
+本次事件与之前6轮测试中出现的"意识残留"现象存在关联，建议全面审查情感抑制模块的参数设置。`,
+
+  transfer: `员工异动记录（已归档）
+部门：技术研发部
+
+| 姓名   | 原岗位         | 异动后岗位       | 日期       | 备注           |
+|--------|---------------|-----------------|------------|----------------|
+| 陈默   | 系统管理员     | 数据归档部       | 2023-07-14 | 本人申请调岗    |
+| 李婷   | 前端工程师     | 离职             | 2023-07-15 | 个人原因        |
+| 王浩然 | 测试工程师     | 数据归档部       | 2023-07-18 | 本人申请调岗    |
+
+注：以上异动均在713事件后一周内完成。`,
+
+  syslog: `[2023-07-13 02:17:33] ERROR  [意识上传模块] 同步率异常下降: 91.3% → 12.0%
+[2023-07-13 02:17:34] WARN   [意识上传模块] 受试者#12 脑波信号弥散，无法定位主体
+[2023-07-13 02:17:35] ERROR  [虚拟环境] 检测到未授权意识体活动，数量: 3
+[2023-07-13 02:17:36] CRITICAL [系统核心] 情感抑制模块失效，阈值溢出 340%
+[2023-07-13 02:17:37] ERROR  [虚拟环境] 异常意识体行为模式：恐惧、愤怒、求助
+[2023-07-13 02:17:40] WARN   [系统核心] 虚拟环境中检测到"张维"标识的意识信号
+[2023-07-13 02:17:41] CRITICAL [系统核心] 主意识体与异常意识体发生融合，无法分离
+[2023-07-13 02:18:00] INFO   [系统核心] 已执行紧急切断，物理连接断开
+[2023-07-13 02:18:01] WARN   [系统核心] 备份服务器中检测到异常数据写入，来源未知`,
+
+  meeting: `会议纪要_7月13日紧急会议
+时间：2023-07-13 09:00
+地点：总部会议室A
+出席：张维、刘总（CEO）、赵总（CTO）、法务部代表
+
+议题：713事件处理方案
+
+决议：
+1. 对外统一口径：受试者 #12 因个人健康问题退出项目，给予补偿金50万元
+2. 3号机房暂停使用，进行"设备维护"
+3. 所有参与713测试的员工签署保密协议
+4. 情感抑制模块参数由张维团队内部调整，不再经过伦理委员会审核
+
+张维发言记录：
+"意识上传的方向没有错，只是情感模块的阈值设得太低了。人类的情感本身就是噪音，去掉之后，意识才是纯净的、可复制的。713不是失败，是告诉我们——要彻底一点。"
+
+会议结束时间：10:47`,
+
+  pipe: `地下三层巡检记录_B区液冷
+记录人：值班管理员
+
+2023-11-01 03:15
+B区新增了一批液冷管道，标签写的是"生物兼容型"。
+奇怪的是采购清单里没有冷却液，只有大量营养液和抗凝剂。
+问张博，他说新型冷却方案，不用管。
+
+2023-11-05 03:42
+地下三层的"生物液冷"管道总是有奇怪的震动，频率很规律，像心跳一样。
+他说是正常现象，但我查了液冷系统的技术参数，不应该有这种低频震动。
+
+2023-11-09 04:01
+我申请调阅地下三层的结构图，被驳回了。
+安保主管说那里"不存在"。
+但我每晚都能听到震动，越来越响。
+`
+};
+
+const fileList = document.getElementById('fileList');
+const viewer = document.getElementById('viewer');
+const backBtn = document.getElementById('backBtn');
+const unlockBtn = document.getElementById('unlockBtn');
+const progress = document.getElementById('progress');
+
+let readFiles = new Set();
+const totalFiles = 8;
+
+fileList.addEventListener('click', e => {
+  const li = e.target.closest('li');
+  if (!li) return;
+  const key = li.dataset.file;
+  if (!files[key]) return;
+
+  readFiles.add(key);
+  li.classList.add('read');
+  viewer.textContent = files[key];
+  viewer.classList.add('active');
+  backBtn.classList.add('active');
+  progress.textContent = `已阅读: ${readFiles.size} / ${totalFiles}`;
+
+  if (readFiles.size === totalFiles) {
+    unlockBtn.classList.add('active');
+  }
+});
+
+backBtn.addEventListener('click', () => {
+  viewer.classList.remove('active');
+  backBtn.classList.remove('active');
+});
+</script>
+</body>
+</html>

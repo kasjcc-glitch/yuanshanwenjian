@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stage 6-3 - 潘多拉核心 [第三层]</title>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --panel-bg: #050505;
+            --text-dim: #333333;
+            --text-main: #33ff33;
+            --accent: #33ff33;
+            --accent-dim: #1a801a;
+            --accent-red: #ff3333;
+            --border-color: #1a1a1a;
+        }
+        body {
+            background: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Courier New', 'Lucida Console', monospace;
+            margin: 0; padding: 20px; height: 100vh; box-sizing: border-box;
+            display: flex; justify-content: center; align-items: center; overflow: hidden;
+        }
+        .crt-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none; z-index: 999; animation: flicker 0.15s infinite;
+        }
+        @keyframes flicker { 0% {opacity:.97;} 50% {opacity:1;} 100% {opacity:.98;} }
+        .window {
+            width: 900px; background: var(--panel-bg); border: 2px solid var(--accent);
+            padding: 2px; box-shadow: 0 0 20px var(--accent-dim), inset 0 0 10px rgba(51,255,51,0.05);
+            max-height: 90vh; display: flex; flex-direction: column; position: relative;
+        }
+        .inner-window { border: 1px solid var(--border-color); padding: 30px; height: 100%; overflow-y: auto; }
+        .inner-window::-webkit-scrollbar { width: 6px; }
+        .inner-window::-webkit-scrollbar-track { background: #000; }
+        .inner-window::-webkit-scrollbar-thumb { background: var(--accent-dim); }
+        .status-bar {
+            display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px; margin-bottom: 20px; font-size: 12px; color: var(--text-dim);
+        }
+        .status-bar .highlight { color: var(--accent); font-weight: bold; }
+        h1 {
+            color: var(--accent); font-size: 18px; text-transform: uppercase;
+            border-bottom: 2px dashed var(--accent-dim); padding-bottom: 10px; margin: 0 0 20px;
+            letter-spacing: 2px; text-shadow: 0 0 10px var(--accent-dim);
+        }
+        h2 { color: var(--accent); font-size: 14px; margin-bottom: 15px; }
+        h2::before { content: "> "; color: var(--accent-dim); }
+        .task-desc {
+            font-size: 13px; line-height: 1.8; color: var(--text-main); margin-bottom: 20px;
+            border-left: 2px solid var(--accent-dim); background: rgba(51,255,51,0.02); padding: 12px;
+        }
+        .task-desc .prompt::before { content: "> "; color: var(--accent); }
+        .puzzle-area { border: 1px solid var(--accent-dim); background: #000; padding: 20px; margin-bottom: 20px; }
+        .terminal {
+            background: #000; border: 1px solid var(--border-color); padding: 15px; font-size: 12.5px;
+            line-height: 1.85; color: var(--text-main); margin-bottom: 15px; min-height: 260px;
+            max-height: 42vh; overflow-y: auto; white-space: pre-wrap;
+        }
+        .terminal::-webkit-scrollbar { width: 6px; }
+        .terminal::-webkit-scrollbar-track { background: #000; }
+        .terminal::-webkit-scrollbar-thumb { background: var(--accent-dim); }
+        .terminal .sys   { color: var(--text-dim); }
+        .terminal .echo  { color: var(--accent); }
+        .terminal .res   { color: var(--accent); }
+        .terminal .err   { color: var(--accent-red); }
+        .terminal .ghost { color: #66ccff; font-style: italic; }
+        .cmd-line { display: flex; gap: 10px; align-items: center; margin-top: 15px; }
+        .cmd-line .ps { color: var(--accent); font-size: 14px; white-space: nowrap; }
+        .cmd-line input {
+            flex: 1; background: #000; border: 1px solid var(--accent-dim); color: var(--accent);
+            font-family: 'Courier New', monospace; font-size: 14px; padding: 8px 12px; outline: none;
+        }
+        .cmd-line input:focus { border-color: var(--accent); box-shadow: 0 0 5px var(--accent-dim); }
+        .cmd-line input::placeholder { color: var(--text-dim); }
+        .cmd-line input:disabled { border-color: var(--accent-red); color: var(--accent-red); }
+        .progress { height: 14px; border: 1px solid var(--accent-dim); background: #000; margin-top: 8px; display: none; }
+        .progress .bar { height: 100%; width: 0%; background: var(--accent); box-shadow: 0 0 8px var(--accent); transition: width 0.6s ease; }
+        .btn {
+            background: #000; border: 1px solid var(--accent-dim); color: var(--accent);
+            font-family: 'Courier New', monospace; font-size: 13px; padding: 8px 20px; cursor: pointer; transition: all 0.15s;
+        }
+        .btn:hover { background: var(--accent-dim); color: #fff; box-shadow: 0 0 8px var(--accent-dim); }
+        .btn.danger { border-color: var(--accent-red); color: var(--accent-red); }
+        .btn.danger:hover { background: rgba(255,51,51,0.15); color: #ff6666; box-shadow: 0 0 8px rgba(255,51,51,0.3); }
+        .shake { animation: glitch 0.3s ease-in-out; }
+        @keyframes glitch {
+            0%{transform:translate(0);} 20%{transform:translate(-3px,2px);} 40%{transform:translate(3px,-2px);}
+            60%{transform:translate(-2px,-1px);} 80%{transform:translate(2px,1px);} 100%{transform:translate(0);}
+        }
+        .hidden { display: none !important; }
+        .settlement {
+            border: 1px dashed var(--accent-dim); background: rgba(0,0,0,0.6); padding: 20px; margin-top: 20px;
+            font-size: 13px; line-height: 2;
+        }
+        .settlement .tag { color: var(--accent-red); font-weight: bold; }
+        .settlement .coord { color: var(--accent); letter-spacing: 1px; }
+        .nav-links {
+            margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--border-color);
+            display: flex; gap: 20px; font-size: 12px;
+        }
+        .nav-links a { color: var(--text-dim); text-decoration: none; transition: color 0.15s; }
+        .nav-links a:hover { color: var(--accent); }
+        .nav-links a::before { content: "[ "; }
+        .nav-links a::after  { content: " ]"; }
+    </style>
+</head>
+<body>
+<div class="crt-overlay"></div>
+<div class="window">
+    <div class="inner-window">
+        <div class="status-bar">
+            <span>MEMORY: 640K OK</span>
+            <span class="highlight">验证进度：第三层 / 共三层</span>
+            <span>C:\PANDORA\CORE\STAGE_6_3.EXE</span>
+        </div>
+        <h1>// 潘多拉核心 - 回声覆写 //</h1>
+        <div id="puzzle-3" class="puzzle-area">
+            <div class="task-desc">
+                <div class="prompt">[系统任务] 核心已解锁。它只响应与张维残响同频的操作者。</div>
+                <div class="prompt">[操作方式] 全程敲指令：先 tune 调谐脑波，再 sign 签名覆写。输入 help 查看指令。</div>
+            </div>
+            <div class="terminal" id="terminal"></div>
+            <div class="progress" id="progress"><div class="bar" id="bar"></div></div>
+            <div class="cmd-line">
+                <span class="ps">C:\PANDORA&gt;</span>
+                <input type="text" id="cmd-input" placeholder="输入指令，回车执行..." autocomplete="off">
+            </div>
+        </div>
+        <div id="settlement" class="settlement hidden">
+            <h2>潘多拉核心 · 关闭叙事</h2>
+            <p>覆写签名校验通过。核心叙事层随同调频道一同终止。</p>
+            <p>检测到残留异常数据流：<span class="tag">#UNKNOWN</span></p>
+            <p>坐标残留：<span class="coord">30.5928° N, 114.3055° E</span></p>
+            <p>回声协议标记：<span class="tag">ECHO-7756</span> —— 张维的意识碎片被写入关机序列，在远山数据3号机房永久回响。</p>
+            <br>
+            <button class="btn danger" onclick="goNext()">继续深入 &gt;&gt;</button>
+        </div>
+        <div class="nav-links">
+            <a href="stage6_2.html">返回上一层</a>
+            <a href="stage5.html">返回核心控制台</a>
+        </div>
+    </div>
+</div>
+<script>
+    const CORRECT_FREQ = '7.8';
+    const CORRECT_SIGN = 'SHUTDOWN_OMEGA_77560455';
+    const term   = document.getElementById('terminal');
+    const input  = document.getElementById('cmd-input');
+    const prog   = document.getElementById('progress');
+    const bar    = document.getElementById('bar');
+    const puzzle = document.getElementById('puzzle-3');
+    const settlement = document.getElementById('settlement');
+    let tuned = false, signed = false;
+    function line(text, cls) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        if (cls) div.className = cls;
+        term.appendChild(div);
+        term.scrollTop = term.scrollHeight;
+    }
+    function echoCmd(cmd) { line('C:\\PANDORA> ' + cmd, 'echo'); }
+    function shake() {
+        term.classList.remove('shake'); void term.offsetWidth; term.classList.add('shake');
+    }
+    function boot() {
+        line('PANDORA CORE v3.0 · 回声覆写模块', 'sys');
+        line('载入残响频道... 完成', 'sys');
+        line('系统待命。输入 help 查看可用指令。', 'sys');
+        line('', 'sys');
+    }
+    function doHelp() {
+        line('可用指令：', 'res');
+        line('  help              显示本帮助', 'res');
+        line('  tune <频率>       调谐脑波同调频道 (单位 Hz)', 'res');
+        line('  sign <覆写指令>   提交最终覆写签名', 'res');
+        line('  clear             清屏', 'res');
+    }
+    function doTune(arg) {
+        if (!arg) { line('用法: tune <频率>  例: tune 7.8', 'err'); return; }
+        const v = arg.toLowerCase().trim();
+        if (v === CORRECT_FREQ) {
+            line('接入调谐频道... 目标锁定 7.8Hz', 'res');
+            prog.style.display = 'block';
+            let p = 0;
+            const t = setInterval(() => {
+                p += 20; bar.style.width = Math.min(p, 100) + '%';
+                if (p >= 100) {
+                    clearInterval(t); tuned = true;
+                    setTimeout(() => {
+                        prog.style.display = 'none'; bar.style.width = '0%';
+                        line('同步度 100%。意识通道已打开。', 'res');
+                        line('残响·张维：「你能听到我... 说明你同到了我的频。」', 'ghost');
+                        line('残响·张维：「覆写签名不是我的编号。规则是——」', 'ghost');
+                        line('残响·张维：「SHUTDOWN_OMEGA_ + 我的编号(去掉字母) + 会话被强制终止那一刻(时+分，去掉冒号)。」', 'ghost');
+                        line('残响·张维：「时刻... 去翻上一层的会话日志。我究竟在哪一秒，被抹除的。」', 'ghost');
+                        line('现在用 sign <覆写指令> 提交签名。', 'sys');
+                    }, 500);
+                }
+            }, 300);
+            return;
+        }
+        shake();
+        if (v === '7.83' || v === '7.83hz') {
+            line('同调失败：7.83Hz 是舒曼共振自然基频，属于环境干扰，不是潘多拉锁定实验体的目标值。', 'err');
+        } else if (v === '0.5') {
+            line('同调失败：0.5Hz 是深度昏迷残留波形——那是排异失败后的死寂，频道里没有回答。', 'err');
+        } else if (v === '40') {
+            line('同调失败：40Hz 是觉醒态伽马波。实验体早被压到无法觉醒，频道对不上。', 'err');
+        } else if (['22.4','28.1','33.7','38.6','39.4','43.2','41.9'].indexOf(v) !== -1) {
+            line('同调失败：你输入的像是上一层的温度读数。频率单位是 Hz，别串题。', 'err');
+        } else {
+            line('同调失败：频道无响应。目标频率藏在上一层日志的脑波同步记录里。', 'err');
+        }
+    }
+    function doSign(arg) {
+        if (!arg) { line('用法: sign <覆写指令>', 'err'); return; }
+        if (!tuned) {
+            shake();
+            line('覆写被拒绝：意识通道尚未打开。先用 tune <频率> 与残响同调。', 'err');
+            return;
+        }
+        const v = arg.toUpperCase().replace(/\s/g, '');
+        if (v === CORRECT_SIGN) {
+            signed = true;
+            line('签名校验通过。覆写序列执行中...', 'res');
+            line('ACCESS_GRANTED. 张维的意识碎片已写入关机序列。', 'res');
+            input.disabled = true;
+            setTimeout(() => { puzzle.classList.add('hidden'); settlement.classList.remove('hidden'); }, 1600);
+            return;
+        }
+        shake();
+        if (v === 'SHUTDOWN_OMEGA_7756' || v === 'SHUTDOWN_OMEGA_YS7756') {
+            line('签名不完整：缺少会话被强制终止的时刻。去翻上一层日志的最后几行。', 'err');
+        } else if (v === 'SHUTDOWN_OMEGA_77560510') {
+            line('时刻错误：05:10 是断连之后的一条温度读数。那时张维早已不在。', 'err');
+        } else if (v === 'SHUTDOWN_OMEGA_77560453') {
+            line('时刻错误：04:53 是加密操作的时刻，不是他被抹除的那一秒。', 'err');
+        } else if (v.indexOf('SHUTDOWN_OMEGA_') !== 0) {
+            line('签名格式错误：应以 SHUTDOWN_OMEGA_ 开头。', 'err');
+        } else {
+            line('签名校验失败：编号或时刻有误。规则=SHUTDOWN_OMEGA_+编号(去字母)+终止时刻(时分去冒号)。', 'err');
+        }
+    }
+    function handle(cmd) {
+        const raw = cmd.trim();
+        if (raw === '') return;
+        echoCmd(raw);
+        const sp = raw.indexOf(' ');
+        const head = (sp === -1 ? raw : raw.slice(0, sp)).toLowerCase();
+        const tail = sp === -1 ? '' : raw.slice(sp + 1);
+        if (head === 'help') doHelp();
+        else if (head === 'tune') doTune(tail);
+        else if (head === 'sign') doSign(tail);
+        else if (head === 'clear') { term.innerHTML = ''; boot(); }
+        else { shake(); line('未知指令 "' + head + '"。输入 help 查看可用指令。', 'err'); }
+    }
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { const v = input.value; input.value = ''; handle(v); }
+    });
+    function goNext() { window.location.href = 'stage7.html'; }
+    boot();
+    input.focus();
+</script>
+</body>
+</html>

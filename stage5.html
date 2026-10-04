@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stage 5 - 核心覆写：情感阈值</title>
+    <style>
+        :root { --bg: #050505; --panel: #0a0a0a; --text: #6a6a6a; --green: #2e8b57; --red: #b02020; --border: #1a1a1a; }
+        body { background: var(--bg); color: var(--text); font-family: 'Courier New', monospace; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        .status-bar { border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; justify-content: space-between; font-size: 12px; color: #555; }
+        .status-bar .active { color: var(--green); }
+        .main-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex-grow: 1; padding: 20px; box-sizing: border-box; }
+        .visual-panel { border: 1px solid var(--border); background: #080808; padding: 20px; display: flex; flex-direction: column; }
+        .visual-panel h2 { color: var(--green); font-size: 14px; border-bottom: 1px dashed #333; padding-bottom: 8px; margin: 0 0 15px 0; }
+        #brainwave-canvas { width: 100%; height: 180px; background: #000; border: 1px solid #222; margin-bottom: 15px; }
+        .bio-stats { font-size: 12px; line-height: 1.8; color: #888; margin-bottom: 15px; }
+        .bio-stats span { color: #ccc; }
+        
+        /* 新增：动态同步进度条样式 */
+        .sync-progress { border: 1px solid #222; padding: 15px; background: #0c0c0c; height: 80px; display: flex; flex-direction: column; justify-content: center; }
+        .sync-progress .sync-title { font-size: 11px; color: #666; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        .sync-bar-bg { width: 100%; height: 4px; background: #222; }
+        .sync-bar-fill { width: 0%; height: 100%; background: var(--green); transition: width 1.5s ease-out; box-shadow: 0 0 10px rgba(46, 139, 87, 0.5); }
+
+        .control-panel { border: 1px solid var(--border); background: #080808; padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
+        .control-panel h2 { color: var(--green); font-size: 14px; border-bottom: 1px dashed #333; padding-bottom: 8px; margin: 0; }
+        input[type="text"], input[type="password"] { background: #000; border: 1px solid #333; color: var(--green); padding: 8px 12px; font-family: inherit; font-size: 13px; width: 100%; box-sizing: border-box; margin-bottom: 8px; }
+        input:focus { outline: none; border-color: var(--green); }
+        button { background: transparent; border: 1px solid var(--green); color: var(--green); padding: 8px 16px; cursor: pointer; font-family: inherit; font-size: 13px; transition: all 0.3s; width: 100%; }
+        button:hover { background: var(--green); color: #000; }
+        button.danger { border-color: var(--red); color: var(--red); }
+        button.danger:hover { background: var(--red); color: #000; }
+        .slider-container { margin: 15px 0; }
+        input[type=range] { width: 100%; -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 8px; background: var(--green); cursor: pointer; margin-top: -6px; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 3px; cursor: pointer; background: #333; }
+        .slider-labels { display: flex; justify-content: space-between; font-size: 10px; color: #555; margin-top: 4px; }
+        .freq-display { color: var(--green); font-weight: bold; }
+        
+        .log-output { height: 120px; background: #000; border: 1px solid #222; padding: 10px; font-size: 12px; color: #888; overflow-y: auto; margin-top: auto; }
+        .log-entry { margin-bottom: 4px; }
+        .log-success { color: var(--green); }
+        .log-error { color: var(--red); }
+        .log-warn { color: #cc9900; }
+        
+        .glitch { animation: glitch-anim 0.2s cubic-bezier(.25,.46,.45,.94) both infinite; color: var(--red); }
+        @keyframes glitch-anim { 0% { transform: translate(0) } 20% { transform: translate(-2px, 2px) } 40% { transform: translate(-2px, -2px) } 60% { transform: translate(2px, 2px) } 80% { transform: translate(2px, -2px) } 100% { transform: translate(0) } }
+        .hidden { display: none !important; }
+        
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; display: flex; justify-content: center; align-items: center; flex-direction: column; color: var(--green); text-align: center; opacity: 0; pointer-events: none; transition: opacity 1.2s; }
+        .overlay.visible { opacity: 1; pointer-events: auto; }
+        .overlay h1 { font-size: 36px; text-shadow: 0 0 15px var(--green); margin-bottom: 20px; opacity: 0; transform: translateY(10px); transition: all 0.6s; }
+        .overlay h1.show { opacity: 1; transform: translateY(0); }
+        
+        .narrative { display: none; padding: 15px; margin: 10px 0; background: #0c0c0c; border-left: 2px solid var(--green); font-size: 13px; line-height: 1.9; color: #999; animation: fadeIn 0.8s; }
+        .narrative.active { display: block; }
+        .narrative .speaker { color: var(--green); font-weight: bold; margin-bottom: 4px; }
+        .narrative .whisper { color: #555; font-style: italic; }
+        .narrative .corrupted { color: var(--red); text-shadow: 0 0 4px var(--red); }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .wave-corrupted { animation: waveGlitch 0.15s infinite; }
+        @keyframes waveGlitch { 0% { filter: none; } 50% { filter: hue-rotate(90deg) blur(1px); } 100% { filter: none; } }
+    </style>
+</head>
+<body>
+
+    <div class="status-bar">
+        <span>远山数据 - 核心控制台 [ROOT ACCESS]</span>
+        <span>同步率: <span class="active" id="sync-pct">0%</span></span>
+    </div>
+
+    <div class="main-container">
+        <!-- 左侧：生物遥测面板 -->
+        <div class="visual-panel">
+            <h2>生物遥测数据</h2>
+            <canvas id="brainwave-canvas"></canvas>
+            <div class="bio-stats">
+                <div>目标对象: <span id="target-name">未知</span></div>
+                <div>当前情绪: <span id="current-emotion" style="color:#555;">监测中...</span></div>
+                <div>皮质醇水平: <span id="cortisol-level">正常</span></div>
+            </div>
+
+            <!-- 替换为动态同步进度条 -->
+            <div class="sync-progress">
+                <div class="sync-title">
+                    <span>同步进程: <span id="sync-status-text">未初始化</span></span>
+                    <span id="sync-percent-display" style="color:var(--green)">0%</span>
+                </div>
+                <div class="sync-bar-bg">
+                    <div class="sync-bar-fill" id="sync-bar"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：控制面板 -->
+        <div class="control-panel">
+            <!-- 第1关：去掉了输入框的 placeholder 提示 -->
+            <div id="puzzle-1">
+                <h2>[1/3] 管理员身份覆写</h2>
+                <p style="font-size:12px; color:#666; margin:8px 0;">系统要求输入高级研究员凭证。</p>
+                <input type="text" id="p1-user" placeholder="">
+                <input type="password" id="p1-pass" placeholder="">
+                <button onclick="checkPuzzle1()">执行登录</button>
+            </div>
+
+            <!-- 剧情段1 -->
+            <div id="narrative-1" class="narrative">
+                <div class="speaker">[意识接入中...]</div>
+                <p>你睁开眼。眼前是熟悉的3号机房控制台，绿色光标在黑色屏幕上跳动。</p>
+                <p>等等——你记得自己应该躺在地下三层的液冷舱里。营养液的味道还在喉咙里。</p>
+                <p class="whisper">"张维？你能听到吗？"</p>
+                <p>是陈默的声音。不，不对。陈默三年前就被调走了。</p>
+                <p class="corrupted">"……救……我……"</p>
+                <p>声音消失了。控制台屏幕上自动跳出了一行字：</p>
+                <p style="color:var(--green);">>> 欢迎回来，张维研究员。请继续您的工作。</p>
+            </div>
+
+            <!-- 第2关：去掉了“线索散落在内部论坛中”的提示 -->
+            <div id="puzzle-2" class="hidden">
+                <h2>[2/3] 绝望阈值校准</h2>
+                <p style="font-size:12px; color:#666; margin:8px 0;">系统拒绝访问。需验证"真实绝望"情绪。<br>请调节频率至正确的脑波频段。</p>
+                <div class="slider-container">
+                    <input type="range" id="freq-slider" min="1" max="100" value="50" oninput="updateWave()">
+                    <div class="slider-labels">
+                        <span>1Hz (平静)</span>
+                        <span class="freq-display" id="freq-display">5.0Hz</span>
+                        <span>10Hz (恐慌)</span>
+                    </div>
+                </div>
+                <button onclick="checkPuzzle2()">注入情绪样本</button>
+            </div>
+
+            <!-- 剧情段2 -->
+            <div id="narrative-2" class="narrative">
+                <div class="speaker">[异常信号捕获]</div>
+                <p>当你把频率调到 7.8Hz 的瞬间，脑波图剧烈扭曲。</p>
+                <p class="corrupted">"好冷……为什么这么冷……"</p>
+                <p class="whisper">一个孩子的声音。不，不止一个。是很多人。</p>
+                <p class="corrupted">"张博士……你说过会放我们走的……"</p>
+                <p>你低头看自己的手。手指是半透明的。你能看到皮肤下面的电路板。</p>
+                <p style="color:var(--red);">>> 警告：操作员自身意识稳定性下降至 41%。</p>
+            </div>
+
+            <!-- 第3关 -->
+            <div id="puzzle-3" class="hidden">
+                <h2>[3/3] 协议终止</h2>
+                <p style="font-size:12px; color:#666; margin:8px 0;">核心已解锁。<br>输入紧急关闭指令以释放所有生物算力单元。</p>
+                <input type="text" id="p3-code" placeholder="">
+                <button onclick="checkPuzzle3()" class="danger">执行终止程序</button>
+            </div>
+
+            <!-- 剧情段3 -->
+            <div id="narrative-3" class="narrative">
+                <div class="speaker">[最后一条日志 · 张维]</div>
+                <p>"我终于明白了。713那天，上传失败的不是#12。</p>
+                <p>是我。</p>
+                <p>我的肉体在液冷舱里已经死了三年。现在的'我'，只是服务器里一段不肯消散的意识残片。我把自己锁在这里，一遍又一遍地重复着'实验'，以为还在工作。</p>
+                <p>陈默是对的。情感不是噪音。情感是我们还活着的证明。</p>
+                <p>该结束了。"</p>
+            </div>
+
+            <div class="log-output" id="sys-log">
+                <div class="log-entry">> 系统初始化完成...</div>
+                <div class="log-entry">> 等待管理员指令...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通关遮罩 -->
+    <div id="success-overlay" class="overlay">
+        <h1 id="ov-title">协议终止</h1>
+    </div>
+
+    <script>
+        const ANSWERS = {
+            user: "7756",
+            pass: "2019",
+            freq: 78,
+            code: "SHUTDOWN_OMEGA"
+        };
+
+        // 更新左侧同步进度条的 UI 状态
+        function updateSyncUI(percent) {
+            document.getElementById('sync-pct').innerText = percent + '%';
+            document.getElementById('sync-percent-display').innerText = percent + '%';
+            document.getElementById('sync-bar').style.width = percent + '%';
+            
+            var statusText = "未初始化";
+            if (percent >= 100) statusText = "核心同步完成";
+            else if (percent >= 66) statusText = "深度同步中";
+            else if (percent >= 33) statusText = "基础身份覆写";
+            document.getElementById('sync-status-text').innerText = statusText;
+        }
+
+        // 更新底部控制台日志
+        function log(msg, type) {
+            if (type === undefined) type = 'normal';
+            var logBox = document.getElementById('sys-log');
+            var div = document.createElement('div');
+            div.className = 'log-entry';
+            if (type === 'error') div.classList.add('log-error');
+            if (type === 'success') div.classList.add('log-success');
+            if (type === 'warn') div.classList.add('log-warn');
+            div.innerText = '> ' + msg;
+            logBox.appendChild(div);
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        var canvas = document.getElementById('brainwave-canvas');
+        var ctx = canvas.getContext('2d');
+        var width, height;
+        var frequency = 50;
+        var phase = 0;
+        var amplitude = 20;
+        var isCorrupted = false;
+
+        function resize() {
+            width = canvas.width = canvas.offsetWidth;
+            height = canvas.height = canvas.offsetHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function draw() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+            ctx.beginPath();
+            ctx.strokeStyle = isCorrupted ? '#b02020' : (frequency > 80 ? '#ff3333' : '#2e8b57');
+            ctx.lineWidth = isCorrupted ? 3 : 2;
+            var waveLength = 100 - frequency;
+            if (waveLength < 2) waveLength = 2;
+            for (var x = 0; x < width; x++) {
+                var noise = isCorrupted ? (Math.random() - 0.5) * 30 : 0;
+                var y = height / 2 + Math.sin((x + phase) / waveLength) * amplitude * Math.sin(x / width * Math.PI) + noise;
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            phase += 2 + (frequency / 10);
+            requestAnimationFrame(draw);
+        }
+        draw();
+
+        function updateWave() {
+            var val = document.getElementById('freq-slider').value;
+            frequency = parseInt(val);
+            var hz = (val / 100) * 10;
+            document.getElementById('freq-display').innerText = hz.toFixed(1) + 'Hz';
+            if (val > 80) amplitude = 40;
+            else if (val < 20) amplitude = 10;
+            else amplitude = 20;
+        }
+
+        function checkPuzzle1() {
+            var u = document.getElementById('p1-user').value.trim();
+            var p = document.getElementById('p1-pass').value.trim();
+            if (u === ANSWERS.user && p === ANSWERS.pass) {
+                log('身份验证通过。欢迎，张维研究员。', 'success');
+                document.getElementById('puzzle-1').classList.add('hidden');
+                document.getElementById('target-name').innerText = '实验体 #89757 (张维)';
+                document.getElementById('current-emotion').innerText = '困惑';
+                document.getElementById('current-emotion').style.color = '#cc9900';
+                updateSyncUI(33); // 进度条更新
+                log('正在建立神经连接...', 'warn');
+                setTimeout(function() {
+                    document.getElementById('narrative-1').classList.add('active');
+                    log('意识接入完成。目标对象：张维（已故/数字化）。', 'warn');
+                }, 800);
+                setTimeout(function() {
+                    document.getElementById('puzzle-2').classList.remove('hidden');
+                }, 1200);
+            } else {
+                log('验证失败！用户名或密码错误。', 'error');
+                document.body.classList.add('glitch');
+                setTimeout(function() { document.body.classList.remove('glitch'); }, 500);
+            }
+        }
+
+        function checkPuzzle2() {
+            var val = parseInt(document.getElementById('freq-slider').value);
+            if (val >= 76 && val <= 80) {
+                log('情绪同步成功。检测到深度绝望 (7.8Hz)。', 'success');
+                isCorrupted = true;
+                document.getElementById('brainwave-canvas').classList.add('wave-corrupted');
+                document.getElementById('puzzle-2').classList.add('hidden');
+                document.getElementById('current-emotion').innerText = '极度绝望';
+                document.getElementById('current-emotion').style.color = '#b02020';
+                updateSyncUI(66); // 进度条更新
+                log('警告：检测到多重意识体信号重叠。', 'error');
+                setTimeout(function() {
+                    document.getElementById('narrative-2').classList.add('active');
+                }, 600);
+                setTimeout(function() {
+                    document.getElementById('puzzle-3').classList.remove('hidden');
+                    isCorrupted = false;
+                    document.getElementById('brainwave-canvas').classList.remove('wave-corrupted');
+                }, 1500);
+            } else {
+                log('频率不匹配。当前波形与目标频段差异过大，请重新调节。', 'error');
+                document.body.classList.add('glitch');
+                setTimeout(function() { document.body.classList.remove('glitch'); }, 500);
+            }
+        }
+
+        function checkPuzzle3() {
+            var code = document.getElementById('p3-code').value.trim();
+            if (code === ANSWERS.code) {
+                log('终止指令已执行。协议终止。', 'success');
+                document.getElementById('puzzle-3').classList.add('hidden');
+                updateSyncUI(100); // 进度条更新
+                document.getElementById('cortisol-level').innerText = '已清除';
+                document.getElementById('cortisol-level').style.color = '#2e8b57';
+                log('所有受试者意识正在断开连接。', 'success');
+                setTimeout(function() {
+                    document.getElementById('narrative-3').classList.add('active');
+                }, 500);
+                setTimeout(showSuccessOverlay, 2200);
+            } else {
+                log('指令错误！终止协议未激活。', 'error');
+                document.body.classList.add('glitch');
+                setTimeout(function() { document.body.classList.remove('glitch'); }, 500);
+            }
+        }
+
+        function showSuccessOverlay() {
+            var overlay = document.getElementById('success-overlay');
+            overlay.classList.add('visible');
+            setTimeout(function() {
+                document.getElementById('ov-title').classList.add('show');
+            }, 100);
+            setTimeout(function() {
+                window.location.href = 'stage6.html';
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
+
+
